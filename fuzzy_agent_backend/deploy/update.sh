@@ -1,15 +1,18 @@
 #!/bin/bash
-# Pull latest code from GitHub and restart backend (no manual python app.py needed).
-# Run on GCP VM whenever you push new code to GitHub.
-#
-# Usage: bash update.sh
+# Pull latest code and restart backend.
+# Run from: ~/Fuzzy_sets/fuzzy_agent_backend/deploy
+#   bash update.sh
 
 set -euo pipefail
 
-INSTALL_DIR="${INSTALL_DIR:-$HOME/fuzzy}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DEFAULT_INSTALL_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
+INSTALL_DIR="${INSTALL_DIR:-$DEFAULT_INSTALL_DIR}"
 BACKEND_DIR="$INSTALL_DIR/fuzzy_agent_backend/backend"
 SERVICE_NAME="fuzzy-api"
 
+echo "==> Using repo at: $INSTALL_DIR"
 echo "==> Pulling latest from GitHub..."
 cd "$INSTALL_DIR"
 git pull

@@ -1,23 +1,27 @@
 #!/bin/bash
-# One-time GCP VM setup: clone from GitHub (SSH) + auto-start backend on boot.
-# Run on Ubuntu VM after: git clone ... OR curl this script from repo.
-#
-# Usage:
-#   export GITHUB_REPO="git@github.com:YOUR_USER/fuzzy.git"
+# One-time GCP VM setup: auto-start backend on boot.
+# Run from anywhere inside the cloned repo:
+#   cd ~/Fuzzy_sets/fuzzy_agent_backend/deploy
 #   bash setup.sh
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# deploy/ -> fuzzy_agent_backend/ -> repo root (Fuzzy_sets, fuzzy, etc.)
+DEFAULT_INSTALL_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
 GITHUB_REPO="${GITHUB_REPO:-}"
-INSTALL_DIR="${INSTALL_DIR:-$HOME/fuzzy}"
+INSTALL_DIR="${INSTALL_DIR:-$DEFAULT_INSTALL_DIR}"
 BACKEND_DIR="$INSTALL_DIR/fuzzy_agent_backend/backend"
 SERVICE_NAME="fuzzy-api"
 OLLAMA_MODEL="${OLLAMA_MODEL:-phi3}"
 USERNAME="$(whoami)"
 
+echo "==> Using repo at: $INSTALL_DIR"
+
 if [ ! -d "$INSTALL_DIR/.git" ] && [ -z "$GITHUB_REPO" ]; then
-  echo "ERROR: Set GITHUB_REPO or clone the repo to $INSTALL_DIR first."
-  echo '  export GITHUB_REPO="git@github.com:YOUR_USER/fuzzy.git"'
+  echo "ERROR: No git repo found at $INSTALL_DIR"
+  echo "Clone first: git clone https://github.com/ddevguru/Fuzzy_sets.git ~/Fuzzy_sets"
   exit 1
 fi
 
@@ -25,15 +29,16 @@ echo "==> Installing system packages..."
 sudo apt update
 sudo apt install -y python3 python3-pip python3-venv git
 
-echo "==> Cloning or updating repository..."
+echo "==> Updating repository..."
 if [ -d "$INSTALL_DIR/.git" ]; then
-  echo "Repo already at $INSTALL_DIR — pulling latest..."
   cd "$INSTALL_DIR"
-  git pull
+  git pull || true
 elif [ -n "$GITHUB_REPO" ]; then
   git clone "$GITHUB_REPO" "$INSTALL_DIR"
-else
-  echo "ERROR: No repo at $INSTALL_DIR"
+fi
+
+if [ ! -f "$BACKEND_DIR/requirements.txt" ]; then
+  echo "ERROR: Backend not found at $BACKEND_DIR"
   exit 1
 fi
 
@@ -72,9 +77,11 @@ sudo systemctl restart "${SERVICE_NAME}"
 echo ""
 echo "============================================"
 echo "  Setup complete!"
+echo "  Repo:    $INSTALL_DIR"
 echo "  Service: ${SERVICE_NAME}"
 echo "  Status:  sudo systemctl status ${SERVICE_NAME}"
 echo "  Logs:    sudo journalctl -u ${SERVICE_NAME} -f"
 echo "  Health:  curl http://localhost:5000/api/health"
+echo "  Public:  curl http://35.234.218.138:5000/api/health"
 echo "============================================"
 sudo systemctl status "${SERVICE_NAME}" --no-pager || true
