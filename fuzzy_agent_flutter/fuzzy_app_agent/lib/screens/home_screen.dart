@@ -1,9 +1,12 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../models/chat_message.dart';
 import '../services/api_service.dart';
 import '../services/speech_service.dart';
 import '../services/tts_service.dart';
+import '../utils/voice_normalize.dart';
+import '../widgets/fuzzy_architecture_diagram.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -26,12 +29,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   bool _autoListen = true;
   bool _speaking = false;
   bool _sending = false;
+  String _partialVoice = "";
+  String? _stage;
+  Timer? _numberDebounce;
   late AnimationController _pulseCtrl;
 
   static const _langLabels = {"en": "English", "hi": "हिंदी", "mr": "मराठी"};
   static const _primary = Color(0xFF1B5E4B);
   static const _accent = Color(0xFF2F8F6B);
   static const _bg = Color(0xFFF0F4F2);
+
+  static const _architectureImage = "assets/images/fuzzy_logic_architecture.png";
 
   static const _quickCommands = [
     ("Fuzzy logic?", "what is fuzzy logic"),
@@ -52,6 +60,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   @override
   void dispose() {
+    _numberDebounce?.cancel();
     _pulseCtrl.dispose();
     _textController.dispose();
     _scrollController.dispose();
@@ -59,9 +68,33 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
 
   Future<void> _setup() async {
-    await Permission.microphone.request();
-    await _speech.init();
+    final mic = await Permission.microphone.request();
+    if (!mic.isGranted) {
+      setState(() {
+        _loading = false;
+        _messages.add(ChatMessage(
+          text: "Microphone permission is required for voice commands.\n"
+              "Please allow mic access in phone Settings.",
+          isUser: false,
+          isError: true,
+        ));
+      });
+      return;
+    }
+    final speechOk = await _speech.init();
     await _tts.init();
+    if (!speechOk) {
+      setState(() {
+        _loading = false;
+        _messages.add(ChatMessage(
+          text: "Speech recognition not available on this device.\n"
+              "Install Google app or use text input.",
+          isUser: false,
+          isError: true,
+        ));
+      });
+      return;
+    }
     try {
       final res = await _api.startSession();
       await _applyResponse(res, isUser: false);
@@ -92,12 +125,26 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       setState(() => _messages.add(ChatMessage(text: userText, isUser: true)));
     }
     await _applyLanguage(res["language"] as String?);
+
+    Map<String, dynamic>? data = res["data"] as Map<String, dynamic>?;
+    final isArch = (userText != null && VoiceNormalize.isArchitectureQuery(userText)) ||
+        data?["topic"] == "architecture";
+    if (isArch) {
+      data = {
+        ...?data,
+        "topic": "architecture",
+        "diagram_title": data?["diagram_title"] ?? "Fuzzy Logic System Architecture",
+        "show_image": true,
+      };
+    }
+
     setState(() {
       _sessionId = res["session_id"] as String? ?? _sessionId;
+      _stage = res["stage"] as String? ?? _stage;
       _messages.add(ChatMessage(
         text: res["reply"] as String? ?? "",
         isUser: false,
-        data: res["data"] as Map<String, dynamic>?,
+        data: data,
       ));
     });
     _scrollToBottom();
@@ -132,12 +179,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     await _tts.speakAndWait(text);
     if (!mounted) return;
     setState(() => _speaking = false);
-    if (_autoListen && _sessionId != null) _startListening();
+    // Small delay so mic gets audio focus back after TTS
+    await Future.delayed(const Duration(milliseconds: 400));
+    if (_autoListen && _sessionId != null && mounted) _startListening();
   }
 
   Future<void> _send(String text) async {
     final trimmed = text.trim();
     if (trimmed.isEmpty) return;
+    final payload = VoiceNormalize.forBackend(trimmed);
 
   if (_sessionId == null) {
       try {
@@ -167,7 +217,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
     setState(() => _sending = true);
     try {
-      final res = await _api.sendMessage(_sessionId!, trimmed, language: _language);
+      final res = await _api.sendMessage(_sessionId!, payload, language: _language);
       if (!mounted) return;
       await _applyResponse(res, isUser: true, userText: trimmed);
       await _handleAction(res["action"] as String?, res);
@@ -196,24 +246,90 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     }
   }
 
-  void _startListening() {
+  Future<void> _startListening() async {
     if (_listening || _speaking || _sending) return;
     if (_sessionId == null) return;
-    setState(() => _listening = true);
-    _speech.listen((result) {
-      if (!mounted) return;
-      setState(() => _listening = false);
-      if (result.trim().isNotEmpty) _send(result);
-    });
-  }
 
-  void _toggleListen() {
-    if (_listening) {
-      _speech.stop();
-      setState(() => _listening = false);
+    final mic = await Permission.microphone.status;
+    if (!mic.isGranted) {
+      await Permission.microphone.request();
       return;
     }
-    _startListening();
+
+    setState(() {
+      _listening = true;
+      _partialVoice = "";
+    });
+
+    final numberStage = _stage == "ASK_COUNT" || _stage == "ASK_A" || _stage == "ASK_B";
+    if (numberStage) {
+      await _speech.setLanguage("en");
+    } else {
+      await _speech.setLanguage(_language);
+    }
+
+    final started = await _speech.listen(
+      (result) {
+        if (!mounted) return;
+        _numberDebounce?.cancel();
+        setState(() {
+          _listening = false;
+          _partialVoice = "";
+        });
+        if (result.trim().isNotEmpty) _send(result);
+      },
+      onPartial: (partial) {
+        if (!mounted) return;
+        setState(() => _partialVoice = partial);
+        final norm = VoiceNormalize.forBackend(partial);
+        _numberDebounce?.cancel();
+        if (_stage == "ASK_COUNT" && VoiceNormalize.looksLikeCount(norm)) {
+          _numberDebounce = Timer(const Duration(milliseconds: 900), () async {
+            if (!_listening || !mounted) return;
+            await _speech.stop();
+            setState(() {
+              _listening = false;
+              _partialVoice = "";
+            });
+            _send(norm);
+          });
+        } else if ((_stage == "ASK_A" || _stage == "ASK_B") &&
+            VoiceNormalize.looksLikeMembership(norm)) {
+          _numberDebounce = Timer(const Duration(milliseconds: 1100), () async {
+            if (!_listening || !mounted) return;
+            await _speech.stop();
+            setState(() {
+              _listening = false;
+              _partialVoice = "";
+            });
+            _send(norm);
+          });
+        }
+      },
+    );
+
+    if (!started && mounted) {
+      setState(() {
+        _listening = false;
+        _messages.add(ChatMessage(
+          text: "Could not start microphone.\n${_speech.lastError ?? 'Try again or type your message.'}",
+          isUser: false,
+          isError: true,
+        ));
+      });
+    }
+  }
+
+  Future<void> _toggleListen() async {
+    if (_listening) {
+      await _speech.stop();
+      setState(() {
+        _listening = false;
+        _partialVoice = "";
+      });
+      return;
+    }
+    await _startListening();
   }
 
   void _scrollToBottom() {
@@ -272,7 +388,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           ? const Center(child: CircularProgressIndicator(color: _primary))
           : Column(
               children: [
-                _StatusBar(listening: _listening, speaking: _speaking, sending: _sending),
+                _StatusBar(
+                  listening: _listening,
+                  speaking: _speaking,
+                  sending: _sending,
+                  partial: _partialVoice,
+                ),
                 SizedBox(
                   height: 42,
                   child: ListView.separated(
@@ -319,21 +440,30 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
 class _StatusBar extends StatelessWidget {
   final bool listening, speaking, sending;
-  const _StatusBar({required this.listening, required this.speaking, required this.sending});
+  final String partial;
+  const _StatusBar({
+    required this.listening,
+    required this.speaking,
+    required this.sending,
+    this.partial = "",
+  });
 
   @override
   Widget build(BuildContext context) {
     if (!listening && !speaking && !sending) return const SizedBox.shrink();
     final (icon, label, color) = listening
-        ? ("🎤", "Listening…", const Color(0xFFFFE8E8))
+        ? ("🎤", partial.isNotEmpty ? "Hearing: $partial" : "Listening… speak now", const Color(0xFFFFE8E8))
         : speaking
             ? ("🔊", "Speaking…", const Color(0xFFE3F5EC))
             : ("⏳", "Thinking…", const Color(0xFFFFF8E1));
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 7),
+      padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 10),
       color: color,
-      child: Text("$icon  $label", textAlign: TextAlign.center,
+      child: Text("$icon  $label",
+          textAlign: TextAlign.center,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
           style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
     );
   }
@@ -391,12 +521,17 @@ class _MessageBubble extends StatelessWidget {
                 label: const Text("Retry connection"),
               ),
             ],
-            if (data != null && (data["diagram"] != null || data["diagram_image"] != null)) ...[
+            if (data != null &&
+                (data["diagram"] != null ||
+                    data["diagram_image"] != null ||
+                    data["topic"] == "architecture" ||
+                    data["show_image"] == true)) ...[
               const SizedBox(height: 10),
               _DiagramCard(
-                title: data["diagram_title"] as String? ?? "Fuzzy Logic Architecture",
+                title: data["diagram_title"] as String? ?? "Fuzzy Logic System Architecture",
                 diagram: data["diagram"] as String?,
-                imageAsset: data["diagram_image"] as String?,
+                imageAsset: _HomeScreenState._architectureImage,
+                imageOnly: data["topic"] == "architecture" || data["show_image"] == true,
               ),
             ],
             if (data != null && data["formula"] != null) ...[
@@ -414,7 +549,13 @@ class _DiagramCard extends StatelessWidget {
   final String title;
   final String? diagram;
   final String? imageAsset;
-  const _DiagramCard({required this.title, this.diagram, this.imageAsset});
+  final bool imageOnly;
+  const _DiagramCard({
+    required this.title,
+    this.diagram,
+    this.imageAsset,
+    this.imageOnly = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -449,10 +590,12 @@ class _DiagramCard extends StatelessWidget {
                 imageAsset!,
                 fit: BoxFit.contain,
                 width: double.infinity,
-                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                errorBuilder: (_, error, stack) {
+                  return const FuzzyArchitectureDiagram();
+                },
               ),
             ),
-          if (diagram != null && diagram!.isNotEmpty) ...[
+          if (!imageOnly && diagram != null && diagram!.isNotEmpty) ...[
             if (imageAsset != null) const SizedBox(height: 10),
             Container(
               width: double.infinity,
