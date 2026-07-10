@@ -14,8 +14,8 @@ BACKEND_DIR="$INSTALL_DIR/fuzzy_agent_backend/backend"
 SERVICE_NAME="fuzzy-api"
 USERNAME="$(whoami)"
 
-if [ -z "$GITHUB_REPO" ]; then
-  echo "ERROR: Set GITHUB_REPO first."
+if [ ! -d "$INSTALL_DIR/.git" ] && [ -z "$GITHUB_REPO" ]; then
+  echo "ERROR: Set GITHUB_REPO or clone the repo to $INSTALL_DIR first."
   echo '  export GITHUB_REPO="git@github.com:YOUR_USER/fuzzy.git"'
   exit 1
 fi
@@ -24,13 +24,16 @@ echo "==> Installing system packages..."
 sudo apt update
 sudo apt install -y python3 python3-pip python3-venv git
 
-echo "==> Cloning repository via SSH..."
+echo "==> Cloning or updating repository..."
 if [ -d "$INSTALL_DIR/.git" ]; then
-  echo "Repo already exists at $INSTALL_DIR — pulling latest..."
+  echo "Repo already at $INSTALL_DIR — pulling latest..."
   cd "$INSTALL_DIR"
   git pull
-else
+elif [ -n "$GITHUB_REPO" ]; then
   git clone "$GITHUB_REPO" "$INSTALL_DIR"
+else
+  echo "ERROR: No repo at $INSTALL_DIR"
+  exit 1
 fi
 
 echo "==> Creating Python virtualenv..."
