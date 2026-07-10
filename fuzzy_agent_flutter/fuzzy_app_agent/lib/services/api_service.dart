@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 
 class ApiService {
   static const String baseUrl = "http://35.234.218.138:5000";
-  static const _timeout = Duration(seconds: 15);
+  static const _timeout = Duration(seconds: 20);
 
   Future<Map<String, dynamic>> startSession() async {
     final res = await http
@@ -20,43 +20,24 @@ class ApiService {
     String text, {
     String? language,
   }) async {
+    final body = jsonEncode({
+      "session_id": sessionId,
+      "text": text,
+      if (language != null && language.isNotEmpty) "language": language,
+    });
+
     final res = await http
         .post(
           Uri.parse("$baseUrl/api/message"),
           headers: {"Content-Type": "application/json"},
-          body: jsonEncode({
-            "session_id": sessionId,
-            "text": text,
-            if (language != null) "language": language,
-          }),
+          body: body,
         )
         .timeout(_timeout);
 
-    if (res.statusCode == 404) {
-      // Session lost — auto recover and retry once
-      final fresh = await startSession();
-      final retry = await http
-          .post(
-            Uri.parse("$baseUrl/api/message"),
-            headers: {"Content-Type": "application/json"},
-            body: jsonEncode({
-              "session_id": fresh["session_id"],
-              "text": text,
-              if (language != null) "language": language,
-            }),
-          )
-          .timeout(_timeout);
-      if (retry.statusCode != 200) {
-        throw Exception("Server error ${retry.statusCode}");
-      }
-      final data = jsonDecode(retry.body) as Map<String, dynamic>;
-      data["recovered"] = true;
-      return data;
+    if (res.statusCode != 200) {
+      throw Exception("Server error ${res.statusCode}: ${res.body}");
     }
 
-    if (res.statusCode != 200) {
-      throw Exception("Server error ${res.statusCode}");
-    }
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
 

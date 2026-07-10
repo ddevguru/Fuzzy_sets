@@ -28,26 +28,17 @@ def start_session():
     )
 
 
-def _recover_session(old_sid, lang_hint=None):
-    conv.reset_session(old_sid)
-    new_sid = conv.new_session()
-    s = conv.SESSIONS[new_sid]
-    if lang_hint in ("en", "hi", "mr"):
-        s["lang"] = lang_hint
-        s["stage"] = "MAIN"
-        reply = msg(lang_hint, "session_recovered")
-        return new_sid, reply, lang_hint, "MAIN"
-    return new_sid, msg("en", "ask_language"), None, "ASK_LANGUAGE"
-
-
 @app.route("/api/message", methods=["POST"])
 def message():
     body = request.get_json(force=True) or {}
     sid = body.get("session_id")
-    text = body.get("text", "")
+    text = (body.get("text") or "").strip()
     lang_hint = body.get("language")
 
-    if text.strip().lower() == "restart":
+    if not text:
+        return jsonify({"error": "Empty message"}), 400
+
+    if text.lower() == "restart":
         old = conv.SESSIONS.get(sid, {})
         lang = old.get("lang")
         conv.reset_session(sid)
@@ -63,26 +54,31 @@ def message():
             {
                 "session_id": new_sid,
                 "reply": reply,
+                "voice_reply": reply,
                 "stage": s["stage"],
                 "language": lang,
                 "data": None,
             }
         )
 
+    # Session missing or expired — recover AND process this message
+    if not sid or sid not in conv.SESSIONS:
+        new_sid, (result, status) = conv.recover_and_process(sid, text, lang_hint)
+        if status != 200:
+            return jsonify(result), status
+        result["session_id"] = new_sid
+        result["recovered"] = True
+        return jsonify(result), 200
+
     result, status = conv.process_message(sid, text)
     if status == 404 and result.get("recoverable"):
-        new_sid, reply, lang, stage = _recover_session(sid, lang_hint)
-        return jsonify(
-            {
-                "session_id": new_sid,
-                "reply": reply,
-                "voice_reply": reply,
-                "stage": stage,
-                "language": lang,
-                "data": None,
-                "recovered": True,
-            }
-        )
+        new_sid, (result, status) = conv.recover_and_process(sid, text, lang_hint)
+        if status != 200:
+            return jsonify(result), status
+        result["session_id"] = new_sid
+        result["recovered"] = True
+        return jsonify(result), 200
+
     if status != 200:
         return jsonify(result), status
     result["session_id"] = sid

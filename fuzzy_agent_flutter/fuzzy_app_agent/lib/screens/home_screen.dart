@@ -137,17 +137,25 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   Future<void> _send(String text) async {
     final trimmed = text.trim();
-    if (trimmed.isEmpty || _sessionId == null || _sending) return;
+    if (trimmed.isEmpty) return;
+
+  if (_sessionId == null) {
+      try {
+        final res = await _api.startSession();
+        setState(() => _sessionId = res["session_id"] as String?);
+      } catch (e) {
+        setState(() {
+          _messages.add(ChatMessage(text: "Connection error: $e", isUser: false, isError: true));
+        });
+        return;
+      }
+    }
+
+    if (_sending) return;
 
     if (trimmed.toLowerCase() == "stop" || trimmed == "रुको" || trimmed == "थांब") {
       await _stopAll();
       setState(() => _messages.add(ChatMessage(text: trimmed, isUser: true)));
-      if (_sessionId != null) {
-        try {
-          final res = await _api.sendMessage(_sessionId!, trimmed, language: _language);
-          await _applyResponse(res, isUser: false);
-        } catch (_) {}
-      }
       return;
     }
 
@@ -160,9 +168,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     setState(() => _sending = true);
     try {
       final res = await _api.sendMessage(_sessionId!, trimmed, language: _language);
+      if (!mounted) return;
       await _applyResponse(res, isUser: true, userText: trimmed);
       await _handleAction(res["action"] as String?, res);
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _messages.add(ChatMessage(text: "Connection error: $e", isUser: false, isError: true));
       });
@@ -187,7 +197,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
 
   void _startListening() {
-    if (_listening || _speaking || _sessionId == null || _sending) return;
+    if (_listening || _speaking || _sending) return;
+    if (_sessionId == null) return;
     setState(() => _listening = true);
     _speech.listen((result) {
       if (!mounted) return;
@@ -380,11 +391,12 @@ class _MessageBubble extends StatelessWidget {
                 label: const Text("Retry connection"),
               ),
             ],
-            if (data != null && data["diagram"] != null) ...[
+            if (data != null && (data["diagram"] != null || data["diagram_image"] != null)) ...[
               const SizedBox(height: 10),
               _DiagramCard(
                 title: data["diagram_title"] as String? ?? "Fuzzy Logic Architecture",
-                diagram: data["diagram"] as String,
+                diagram: data["diagram"] as String?,
+                imageAsset: data["diagram_image"] as String?,
               ),
             ],
             if (data != null && data["formula"] != null) ...[
@@ -400,8 +412,9 @@ class _MessageBubble extends StatelessWidget {
 
 class _DiagramCard extends StatelessWidget {
   final String title;
-  final String diagram;
-  const _DiagramCard({required this.title, required this.diagram});
+  final String? diagram;
+  final String? imageAsset;
+  const _DiagramCard({required this.title, this.diagram, this.imageAsset});
 
   @override
   Widget build(BuildContext context) {
@@ -409,46 +422,60 @@ class _DiagramCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF0F1F2D), Color(0xFF1A3344)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFF3D8B72)),
+        border: Border.all(color: const Color(0xFF3D8B72), width: 1.5),
+        boxShadow: const [BoxShadow(color: Color(0x18000000), blurRadius: 8, offset: Offset(0, 2))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.account_tree, color: Color(0xFF6ECFAA), size: 16),
+              const Icon(Icons.account_tree, color: Color(0xFF1B5E4B), size: 18),
               const SizedBox(width: 6),
               Expanded(
                 child: Text(title,
                     style: const TextStyle(
-                        color: Color(0xFF6ECFAA), fontWeight: FontWeight.bold, fontSize: 13)),
+                        color: Color(0xFF1B5E4B), fontWeight: FontWeight.bold, fontSize: 14)),
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxHeight: 280),
-            child: SingleChildScrollView(
+          const SizedBox(height: 10),
+          if (imageAsset != null)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.asset(
+                imageAsset!,
+                fit: BoxFit.contain,
+                width: double.infinity,
+                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+              ),
+            ),
+          if (diagram != null && diagram!.isNotEmpty) ...[
+            if (imageAsset != null) const SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF4FAF7),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFD0E5D8)),
+              ),
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Text(
-                  diagram,
+                  diagram!,
                   style: const TextStyle(
                     fontFamily: "monospace",
-                    fontSize: 9,
-                    color: Color(0xFFE0EBF0),
-                    height: 1.4,
+                    fontSize: 8.5,
+                    color: Color(0xFF2F4F45),
+                    height: 1.35,
                   ),
                 ),
               ),
             ),
-          ),
+          ],
         ],
       ),
     );

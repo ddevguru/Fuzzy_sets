@@ -1,46 +1,29 @@
 """Educational content about fuzzy logic in English, Hindi, and Marathi."""
 
 FUZZY_LOGIC_ARCHITECTURE_DIAGRAM = """
-╔══════════════════════════════════════════════════════════════╗
-║           FUZZY LOGIC SYSTEM ARCHITECTURE                     ║
-╚══════════════════════════════════════════════════════════════╝
+        ┌─────────────────────────────────────────────────────┐
+        │              FUZZY LOGIC SYSTEM                      │
+        │                                                      │
+        │              ┌──────────┐                            │
+        │              │  Rules   │  (IF-THEN knowledge base)  │
+        │              └────┬─────┘                            │
+        │                   │                                  │
+  Crisp │    ┌──────────┐   │   ┌──────────────┐   ┌──────────┐ │  Crisp
+  Input├───▶│Fuzzifier │───┼──▶│ Intelligence │──▶│Defuzzifier├──▶│ Output
+        │    └──────────┘   │   │  (Inference) │   └──────────┘ │
+        │         │         │   └──────────────┘         ▲       │
+        │         │ Fuzzy   │         ▲                  │       │
+        │         │ Input   │    Fuzzy Output            │       │
+        │         │ Set     │       Set                  │       │
+        │         └─────────┘         └──────────────────┘       │
+        └─────────────────────────────────────────────────────┘
 
-  ┌──────────────┐      ┌─────────────────┐      ┌──────────────┐
-  │ CRISP INPUT  │─────▶│  FUZZIFICATION  │─────▶│  FUZZY SETS  │
-  │ Sensors,     │      │ Membership      │      │ μ(x) ∈ [0,1] │
-  │ user data    │      │ Functions       │      │ per variable │
-  └──────────────┘      └─────────────────┘      └──────┬───────┘
-                                                        │
-                                                        ▼
-  ┌──────────────┐      ┌─────────────────┐      ┌──────────────┐
-  │ CRISP OUTPUT │◀─────│ DEFUZZIFICATION │◀─────│  INFERENCE   │
-  │ Motor speed, │      │ Centroid / MOM  │      │ Fuzzy Rules  │
-  │ valve, etc.  │      │ / Weighted avg  │      │ IF-THEN      │
-  └──────────────┘      └─────────────────┘      └──────▲───────┘
-                                                        │
-                                                 ┌──────┴───────┐
-                                                 │ KNOWLEDGE    │
-                                                 │ BASE (Rules) │
-                                                 └──────────────┘
-
-MEMBERSHIP FUNCTION SHAPES:
-  ▲     ▲▲      ∩∩∩       ⌒⌒
-  Triangular  Trapezoidal  Gaussian  Bell
-
-CLASSICAL vs FUZZY SET:
-  Classical: x ∈ A  →  {0, 1} only
-  Fuzzy:     x ∈ A  →  μA(x) = 0.0 … 1.0
-
-FUZZY SET OPERATIONS (Zadeh):
-  Union A∪B:        μ = max(μA, μB)
-  Intersection A∩B: μ = min(μA, μB)
-  Complement A':    μ = 1 - μA
-  Difference A-B:   μ = min(μA, 1-μB)
-
-EXAMPLE — AC Temperature Control:
-  Input:  Temp=28°C → Fuzzify → {Hot:0.6, Warm:0.4}
-  Rules:  IF Hot THEN Fan=Fast
-  Output: Defuzzify → Fan speed = 72%
+  1. Crisp Input   → exact sensor/value (e.g. temperature 28°C)
+  2. Fuzzifier     → converts to fuzzy sets (Hot:0.6, Warm:0.4)
+  3. Rules         → expert IF-THEN rules (IF Hot THEN Fan Fast)
+  4. Intelligence  → inference engine applies rules to fuzzy input
+  5. Defuzzifier   → converts fuzzy output to crisp number (fan 72%)
+  6. Crisp Output  → actionable result for actuator/controller
 """
 
 CONTENT = {
@@ -82,12 +65,12 @@ CONTENT = {
             "rules can become complex without careful design."
         ),
         "architecture_intro": (
-            "Here is the architecture of a fuzzy logic control system. "
-            "First, crisp real-world inputs like temperature or speed are converted "
-            "into fuzzy sets through fuzzification using membership functions. "
-            "Then fuzzy IF-THEN rules in the knowledge base perform inference. "
-            "Finally defuzzification converts the fuzzy result back to a crisp output "
-            "like motor speed or valve position. See the diagram on screen."
+            "Here is the fuzzy logic system architecture. "
+            "Crisp Input enters the Fuzzifier which converts exact values into fuzzy sets. "
+            "Rules from the knowledge base define IF-THEN logic. "
+            "The Intelligence block is the inference engine that applies rules to fuzzy input. "
+            "The Defuzzifier converts the fuzzy output set back to a Crisp Output. "
+            "See the diagram on screen — Rules, Fuzzifier, Intelligence, and Defuzzifier."
         ),
     },
     "hi": {
@@ -121,11 +104,12 @@ CONTENT = {
             "जहाँ कानूनी या वैज्ञानिक सटीकता ज़रूरी है, वहाँ यह कम उपयुक्त है।"
         ),
         "architecture_intro": (
-            "यह है फ़ज़ी लॉजिक कंट्रोल सिस्टम का आर्किटेक्चर। "
-            "पहले crisp इनपुट जैसे तापमान को membership functions से fuzzification करके "
-            "fuzzy sets में बदला जाता है। फिर knowledge base के IF-THEN rules से inference होता है। "
-            "अंत में defuzzification से crisp आउटपुट जैसे मोटर स्पीड मिलती है। "
-            "स्क्रीन पर डायग्राम देखें।"
+            "यह है फ़ज़ी लॉजिक सिस्टम का आर्किटेक्चर। "
+            "Crisp Input Fuzzifier में जाता है जो exact values को fuzzy sets में बदलता है। "
+            "Rules knowledge base से IF-THEN logic देते हैं। "
+            "Intelligence inference engine है जो rules को fuzzy input पर लगाता है। "
+            "Defuzzifier fuzzy output को Crisp Output में बदलता है। "
+            "स्क्रीन पर diagram देखें — Rules, Fuzzifier, Intelligence, Defuzzifier।"
         ),
     },
     "mr": {
@@ -158,11 +142,12 @@ CONTENT = {
             "जिथे कायदेशीर किंवा वैज्ञानिक अचूकता आवश्यक आहे तिथे कमी योग्य आहे."
         ),
         "architecture_intro": (
-            "हे आहे फझी लॉजिक कंट्रोल सिस्टमचे आर्किटेक्चर. "
-            "प्रथम crisp इनपुट जसे तापमान membership functions द्वारे fuzzification करून "
-            "fuzzy sets मध्ये रूपांतरित होते. नंतर knowledge base मधील IF-THEN rules ने inference होते. "
-            "शेवटी defuzzification ने crisp आउटपुट जसे मोटर स्पीड मिळते. "
-            "स्क्रीनवरील आकृती पहा."
+            "हे आहे फझी लॉजिक सिस्टमचे आर्किटेक्चर. "
+            "Crisp Input Fuzzifier मध्ये जातो जो exact values ला fuzzy sets मध्ये रूपांतरित करतो. "
+            "Rules knowledge base मधून IF-THEN logic देतात. "
+            "Intelligence हा inference engine आहे. "
+            "Defuzzifier fuzzy output ला Crisp Output मध्ये बदलतो. "
+            "स्क्रीनवर diagram पहा — Rules, Fuzzifier, Intelligence, Defuzzifier."
         ),
     },
 }

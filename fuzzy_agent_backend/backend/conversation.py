@@ -140,6 +140,17 @@ def reset_session(sid):
     SESSIONS.pop(sid, None)
 
 
+def recover_and_process(old_sid, text, lang_hint=None):
+    """New session + actually process the user's message (no lost input)."""
+    SESSIONS.pop(old_sid, None)
+    new_sid = new_session()
+    s = SESSIONS[new_sid]
+    if lang_hint in ("en", "hi", "mr") and not _detect_language(text):
+        s["lang"] = lang_hint
+        s["stage"] = "MAIN"
+    return new_sid, process_message(new_sid, text)
+
+
 def _narrate(fixed_text, lang="en"):
     if not os.environ.get("USE_OLLAMA_NARRATION", "0").lower() in ("1", "true", "yes"):
         return fixed_text
@@ -273,6 +284,7 @@ def _answer_qa(s, topic):
     elif topic == "architecture":
         body = get_topic(lang, "architecture_intro")
         data["diagram"] = FUZZY_LOGIC_ARCHITECTURE_DIAGRAM.strip()
+        data["diagram_image"] = "assets/images/fuzzy_logic_architecture.png"
         data["diagram_title"] = {
             "en": "Fuzzy Logic System Architecture",
             "hi": "फ़ज़ी लॉजिक सिस्टम आर्किटेक्चर",

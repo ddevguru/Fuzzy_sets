@@ -5,6 +5,7 @@ class SpeechService {
   bool isAvailable = false;
   String _locale = "en_US";
   bool _delivered = false;
+  String _lastWords = "";
 
   static const localeMap = {
     "en": "en_US",
@@ -20,9 +21,22 @@ class SpeechService {
   };
 
   Future<bool> init() async {
-    isAvailable = await _speech.initialize();
+    isAvailable = await _speech.initialize(
+      onError: (_) {},
+      onStatus: (status) {
+        // When mic stops, send whatever was heard (fixes missing finalResult)
+        if ((status == 'done' || status == 'notListening') &&
+            !_delivered &&
+            _lastWords.trim().isNotEmpty) {
+          _delivered = true;
+          _onResultCallback?.call(_lastWords.trim());
+        }
+      },
+    );
     return isAvailable;
   }
+
+  void Function(String)? _onResultCallback;
 
   Future<void> setLanguage(String code) async {
     _locale = localeMap[code] ?? "en_US";
@@ -37,21 +51,30 @@ class SpeechService {
     for (final w in _quickWords) {
       if (t.startsWith("$w ")) return true;
     }
-  // numbers 0-9 for membership
     return RegExp(r'^[\d\s.]+$').hasMatch(t);
   }
 
   void listen(void Function(String) onResult, {void Function()? onListening}) {
     _delivered = false;
+    _lastWords = "";
+    _onResultCallback = onResult;
+
     _speech.listen(
       localeId: _locale,
-      listenFor: const Duration(seconds: 15),
-      pauseFor: const Duration(milliseconds: 1200),
+      listenFor: const Duration(seconds: 20),
+      pauseFor: const Duration(milliseconds: 2200),
       partialResults: true,
+      cancelOnError: false,
       onResult: (result) {
         final words = result.recognizedWords.trim();
         if (words.isEmpty || _delivered) return;
-        if (result.finalResult || _isQuickCommand(words)) {
+        _lastWords = words;
+
+        if (result.finalResult) {
+          _delivered = true;
+          _speech.stop();
+          onResult(words);
+        } else if (_isQuickCommand(words)) {
           _delivered = true;
           _speech.stop();
           onResult(words);
@@ -62,7 +85,12 @@ class SpeechService {
   }
 
   void stop() {
-    _delivered = true;
+    if (!_delivered && _lastWords.trim().isNotEmpty) {
+      _delivered = true;
+      _onResultCallback?.call(_lastWords.trim());
+    } else {
+      _delivered = true;
+    }
     _speech.stop();
   }
 
