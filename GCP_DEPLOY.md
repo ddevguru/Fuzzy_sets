@@ -3,6 +3,19 @@
 Backend **ek baar setup** karo — uske baad VM restart par bhi automatically chalega.  
 Code update ke liye sirf `git pull` + `update.sh` chalao, `python app.py` manually nahi.
 
+## Tumhari GCP VM (current)
+
+| Field | Value |
+|-------|-------|
+| Instance | `instance-20260710-132743` |
+| Zone | `asia-south1-a` |
+| External IP | **`35.234.218.138`** |
+| Internal IP | `10.160.0.2` |
+| Backend URL | `http://35.234.218.138:5000` |
+| Ollama (VM par local) | `http://localhost:11434` |
+
+Flutter app mein IP already set hai: `api_service.dart` → `http://35.234.218.138:5000`
+
 ---
 
 ## Part A — GitHub par code daalo (ek baar, apne PC par)
@@ -166,12 +179,12 @@ Bas — pull, dependencies update, service restart. Manual backend run nahi.
 
 ---
 
-## Part D — Flutter app ko GCP se connect karo
+## Part D — Flutter app (already configured)
 
 File: `fuzzy_agent_flutter/fuzzy_app_agent/lib/services/api_service.dart`
 
 ```dart
-static const String baseUrl = "http://YOUR_VM_EXTERNAL_IP:5000";
+static const String baseUrl = "http://35.234.218.138:5000";
 ```
 
 APK build:
@@ -180,6 +193,73 @@ cd c:\fuzzy\fuzzy_agent_flutter\fuzzy_app_agent
 flutter pub get
 flutter build apk --release
 ```
+
+APK path: `build/app/outputs/flutter-apk/app-release.apk`
+
+---
+
+## Part E — Ollama GCP par (auto-start, manually run nahi)
+
+Ollama sirf **natural narration** ke liye hai — fuzzy math Python mein hoti hai.  
+Bina Ollama ke bhi app chalega (fixed text fallback).
+
+### E1. VM par SSH
+
+```bash
+gcloud compute ssh instance-20260710-132743 --zone=asia-south1-a
+```
+
+### E2. Ollama install + auto-start (ek baar)
+
+```bash
+cd ~/fuzzy/fuzzy_agent_backend/deploy
+chmod +x install_ollama.sh
+bash install_ollama.sh
+```
+
+Yeh script:
+- Ollama install karta hai
+- `systemctl enable ollama` — **boot par auto-start**
+- `phi3` model pull karta hai (e2-micro 1GB RAM ke liye safe; `llama3.2` se chhota)
+
+Agar model badalna ho:
+```bash
+export OLLAMA_MODEL=llama3.2
+bash install_ollama.sh
+```
+
+### E3. Backend ko Ollama se connect karo
+
+`setup.sh` already yeh env vars set karta hai:
+```
+OLLAMA_HOST=http://localhost:11434
+OLLAMA_MODEL=phi3
+```
+
+Agar backend pehle se chal raha hai, restart karo:
+```bash
+sudo systemctl restart fuzzy-api
+```
+
+### E4. Verify Ollama
+
+```bash
+sudo systemctl status ollama
+curl http://localhost:11434/api/tags
+ollama run phi3 "Hello"
+```
+
+### Ollama commands
+
+| Kaam | Command |
+|------|---------|
+| Status | `sudo systemctl status ollama` |
+| Restart | `sudo systemctl restart ollama` |
+| Logs | `sudo journalctl -u ollama -f` |
+| Models list | `ollama list` |
+| Naya model | `ollama pull phi3` |
+
+**Note:** Ollama port 11434 bahar expose karne ki zaroorat **nahi** — sirf backend localhost se use karta hai.
 
 ---
 
@@ -203,7 +283,10 @@ flutter build apk --release
 | `git@github.com: Permission denied` | VM par deploy key add kiya? `ssh -T git@github.com` test karo |
 | Backend band ho jata hai | `sudo systemctl status fuzzy-api` — logs mein error dekho |
 | VM restart ke baad down | `sudo systemctl enable fuzzy-api` dubara chalao |
-| Port 5000 bahar se nahi khulta | GCP firewall rule `allow-fuzzy-api` check karo |
+| Port 5000 bahar se nahi khulta | GCP firewall rule `allow-fuzzy-api` tcp:5000 check karo |
+| Flutter "Could not reach backend" | Phone par internet on? IP `35.234.218.138:5000` test: browser mein `http://35.234.218.138:5000/api/health` |
+| Ollama slow / crash | e2-micro par `phi3` use karo, `llama3.2` se avoid karo (RAM kam) |
+| Ollama optional | Bina Ollama ke bhi sab kaam karega — narration fixed text se aayegi |
 | Code update ke baad purana behavior | VM par `bash update.sh` chalao |
 
 ---
@@ -214,6 +297,6 @@ flutter build apk --release
 - [ ] GCP VM + firewall port 5000
 - [ ] VM par GitHub deploy key
 - [ ] `bash setup.sh` — systemd enabled
-- [ ] `curl http://VM_IP:5000/api/health` → ok
-- [ ] Flutter `api_service.dart` mein VM IP
-- [ ] APK install on phone
+- [ ] `curl http://35.234.218.138:5000/api/health` → ok
+- [ ] Flutter APK build + phone par install
+- [ ] (Optional) `bash install_ollama.sh` — narration ke liye

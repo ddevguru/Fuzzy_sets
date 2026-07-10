@@ -2,12 +2,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ApiService {
-  // ── Backend URL ──────────────────────────────────────────────────────────
-  // Android Emulator → host machine:  http://10.0.2.2:5000
-  // Real phone (same Wi-Fi):          http://YOUR_LAN_IP:5000
-  // Google Cloud VM (production):     http://YOUR_GCP_EXTERNAL_IP:5000
-  //                                   or https://your-domain.com
-  static const String baseUrl = "http://10.0.2.2:5000";
+  // Google Cloud VM (production)
+  static const String baseUrl = "http://35.234.218.138:5000";
 
   Future<Map<String, dynamic>> startSession() async {
     final res = await http.post(Uri.parse("$baseUrl/api/session"));

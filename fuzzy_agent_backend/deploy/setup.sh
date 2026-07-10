@@ -12,6 +12,7 @@ GITHUB_REPO="${GITHUB_REPO:-}"
 INSTALL_DIR="${INSTALL_DIR:-$HOME/fuzzy}"
 BACKEND_DIR="$INSTALL_DIR/fuzzy_agent_backend/backend"
 SERVICE_NAME="fuzzy-api"
+OLLAMA_MODEL="${OLLAMA_MODEL:-phi3}"
 USERNAME="$(whoami)"
 
 if [ ! -d "$INSTALL_DIR/.git" ] && [ -z "$GITHUB_REPO" ]; then
@@ -54,6 +55,8 @@ User=${USERNAME}
 WorkingDirectory=${BACKEND_DIR}
 Environment="PATH=${BACKEND_DIR}/venv/bin"
 Environment="PORT=5000"
+Environment="OLLAMA_HOST=http://localhost:11434"
+Environment="OLLAMA_MODEL=${OLLAMA_MODEL}"
 ExecStart=${BACKEND_DIR}/venv/bin/gunicorn --bind 0.0.0.0:5000 --workers 2 --timeout 120 app:app
 Restart=always
 RestartSec=5
