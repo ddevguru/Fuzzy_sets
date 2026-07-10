@@ -12,15 +12,21 @@ import os
 import requests
 
 OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
-OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "llama3.2")
+OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "phi3")
+OLLAMA_ENABLED = os.environ.get("USE_OLLAMA_NARRATION", "0").lower() in ("1", "true", "yes")
+OLLAMA_TIMEOUT = int(os.environ.get("OLLAMA_TIMEOUT", "8"))
 
 
 def ask_ollama(prompt, system=None, trace=None):
+    if not OLLAMA_ENABLED:
+        return None
     payload = {"model": OLLAMA_MODEL, "prompt": prompt, "stream": False}
     if system:
         payload["system"] = system
     try:
-        resp = requests.post(f"{OLLAMA_HOST}/api/generate", json=payload, timeout=30)
+        resp = requests.post(
+            f"{OLLAMA_HOST}/api/generate", json=payload, timeout=OLLAMA_TIMEOUT
+        )
         resp.raise_for_status()
         text = resp.json().get("response", "").strip()
         if trace:
@@ -29,5 +35,4 @@ def ask_ollama(prompt, system=None, trace=None):
     except Exception as e:
         if trace:
             trace.log(prompt=prompt, output=f"ERROR: {e}", model=OLLAMA_MODEL)
-        # Safe fallback: caller will use the fixed factual text instead
         return None

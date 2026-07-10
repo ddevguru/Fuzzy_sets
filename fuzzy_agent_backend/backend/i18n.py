@@ -17,10 +17,12 @@ MESSAGES = {
             "Voice commands you can use: "
             "'start calculation' to begin fuzzy set math, "
             "'what is fuzzy logic' for an explanation, "
-            "'architecture diagram' for the system diagram, "
+            "'fuzzy logic architecture diagram' for the fuzzy system diagram, "
             "'use cases' for real-life examples, "
             "'advantages and disadvantages', "
-            "'next' during calculations, and "
+            "'next' during calculations, "
+            "'stop' to stop speaking and listening, "
+            "'change language' to switch English, Hindi, or Marathi, and "
             "'restart' to start over."
         ),
         "ask_count": "How many elements are in your universe of discourse?",
@@ -41,6 +43,9 @@ MESSAGES = {
         "confused": "Sorry, I got confused. Say 'help' for commands or 'restart' to start over.",
         "qa_ack": "Here is what I know:",
         "start_calc": "Let's begin the fuzzy set calculation.",
+        "stopped": "Stopped. Say 'help' when you need me, or tap the mic to speak again.",
+        "change_language": "Sure! Which language would you like? Say English, Hindi, or Marathi.",
+        "session_recovered": "Connection was refreshed. Please continue.",
     },
     "hi": {
         "ask_language": (
@@ -55,13 +60,14 @@ MESSAGES = {
         "invalid_language": "कृपया English, Hindi, या Marathi में से एक भाषा बताएं।",
         "help": (
             "आप ये वॉइस कमांड इस्तेमाल कर सकते हैं: "
-            "'गणना शुरू करो' — फ़ज़ी सेट गणना शुरू करने के लिए, "
+            "'गणना शुरू करो' — फ़ज़ी सेट गणना, "
             "'फ़ज़ी लॉजिक क्या है' — समझाने के लिए, "
-            "'आर्किटेक्चर डायग्राम' — सिस्टम डायग्राम के लिए, "
-            "'उपयोग के उदाहरण' — वास्तविक जीवन के उदाहरण, "
-            "'फायदे और नुकसान', "
+            "'फ़ज़ी लॉजिक आर्किटेक्चर' — फ़ज़ी सिस्टम डायग्राम, "
+            "'उपयोग के उदाहरण', 'फायदे और नुकसान', "
             "'अगला' — अगला ऑपरेशन, "
-            "'फिर से शुरू' — नए सिरे से शुरू करने के लिए।"
+            "'रुको' — बोलना बंद करने के लिए, "
+            "'भाषा बदलो' — English/Hindi/Marathi, "
+            "'फिर से शुरू' — नए सिरे से।"
         ),
         "ask_count": "आपके यूनिवर्स में कितने एलिमेंट हैं?",
         "invalid_count": "कृपया शून्य से बड़ी कोई पूर्ण संख्या बताएं।",
@@ -84,6 +90,9 @@ MESSAGES = {
         "confused": "माफ़ करें, समझ नहीं आया। 'मदद' कहें या 'फिर से शुरू' कहें।",
         "qa_ack": "यह रहा जवाब:",
         "start_calc": "चलिए फ़ज़ी सेट गणना शुरू करते हैं।",
+        "stopped": "रुक गया। ज़रूरत हो तो 'मदद' कहें या माइक दबाएं।",
+        "change_language": "ठीक है! कौन सी भाषा चाहिए? कहें — English, Hindi, या Marathi।",
+        "session_recovered": "कनेक्शन रीफ़्रेश हो गया। कृपया जारी रखें।",
     },
     "mr": {
         "ask_language": (
@@ -98,13 +107,12 @@ MESSAGES = {
         "invalid_language": "कृपया English, Hindi, किंवा Marathi पैकी एक भाषा सांगा.",
         "help": (
             "तुम्ही हे व्हॉइस कमांड वापरू शकता: "
-            "'गणना सुरू करा' — फझी सेट गणना सुरू करण्यासाठी, "
-            "'फझी लॉजिक म्हणजे काय' — समजावण्यासाठी, "
-            "'आर्किटेक्चर डायग्राम' — सिस्टम आकृतीसाठी, "
-            "'वापराची उदाहरणे' — वास्तविक जीवनातील उदाहरणे, "
-            "'फायदे आणि तोटे', "
-            "'पुढे' — पुढील ऑपरेशन, "
-            "'पुन्हा सुरू' — नव्याने सुरू करण्यासाठी."
+            "'गणना सुरू करा', 'फझी लॉजिक म्हणजे काय', "
+            "'फझी लॉजिक आर्किटेक्चर' — आकृतीसाठी, "
+            "'वापराची उदाहरणे', 'फायदे आणि तोटे', "
+            "'पुढे', 'थांब' — बोलणे थांबवण्यासाठी, "
+            "'भाषा बदला' — English/Hindi/Marathi, "
+            "'पुन्हा सुरू'."
         ),
         "ask_count": "तुमच्या युनिव्हर्समध्ये किती एलिमेंट्स आहेत?",
         "invalid_count": "कृपया शून्यापेक्षा मोठी पूर्ण संख्या सांगा.",
@@ -127,6 +135,9 @@ MESSAGES = {
         "confused": "माफ करा, समजले नाही. 'मदत' म्हणा किंवा 'पुन्हा सुरू' म्हणा.",
         "qa_ack": "हे आहे उत्तर:",
         "start_calc": "चला फझी सेट गणना सुरू करूया.",
+        "stopped": "थांबले. गरज असेल तर 'मदत' म्हणा किंवा माइक दाबा.",
+        "change_language": "ठीक आहे! कोणती भाषा हवी? सांगा — English, Hindi, किंवा Marathi.",
+        "session_recovered": "कनेक्शन रीफ्रेश झाले. कृपया पुढे चालू ठेवा.",
     },
 }
 

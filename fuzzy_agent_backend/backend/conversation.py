@@ -1,8 +1,9 @@
 import re
+import os
 import uuid
 from fuzzy_logic import FORMULAS, OPERATIONS_ORDER, compute_all, steps_for, format_set
 from i18n import SUPPORTED, msg
-from knowledge import ARCHITECTURE_DIAGRAM, get_topic
+from knowledge import FUZZY_LOGIC_ARCHITECTURE_DIAGRAM, get_topic
 from ollama_client import ask_ollama
 from langfuse_tracer import tracer
 
@@ -54,6 +55,24 @@ HELP_WORDS = {
     "mr": ["help", "madat", "मदत", "सहाय्य", "कमांड"],
 }
 
+STOP_WORDS = {
+    "en": ["stop", "quiet", "silence", "cancel listening", "shut up"],
+    "hi": ["stop", "ruk", "ruko", "band karo", "chup", "बंद", "रुको", "रुक", "चुप"],
+    "mr": ["stop", "thamb", "band", "thamba", "थांब", "बंद", "शांत"],
+}
+
+CHANGE_LANG_WORDS = {
+    "en": ["change language", "switch language", "other language", "new language"],
+    "hi": [
+        "change language", "bhasha badlo", "bhasha change",
+        "भाषा बदलो", "भाषा बदल", "दूसरी भाषा",
+    ],
+    "mr": [
+        "change language", "bhasha badla", "dusri bhasha",
+        "भाषा बदला", "दुसरी भाषा",
+    ],
+}
+
 QA_PATTERNS = {
     "what_is_fuzzy_logic": [
         r"fuzzy\s*logic",
@@ -68,19 +87,17 @@ QA_PATTERNS = {
         r"फझी\s*लॉजिक\s*म्हणजे",
     ],
     "architecture": [
-        r"architecture",
-        r"diagram",
-        r"आर्किटेक्चर",
-        r"डायग्राम",
-        r"आकृती",
-        r"structure",
-        r"system\s+design",
+        r"fuzzy\s*logic\s*(system\s*)?(architecture|diagram|structure)",
+        r"architecture\s*(of\s*)?fuzzy",
+        r"fuzzy\s*system\s*diagram",
+        r"फ़?ज़?ी\s*लॉजिक\s*(का\s*)?(आर्किटेक्चर|डायग्राम|संरचना)",
+        r"फझी\s*लॉजिक\s*(चे\s*)?(आर्किटेक्चर|आकृती)",
+        r"फ़?ज़?ी\s*सिस्टम\s*डायग्राम",
     ],
     "use_cases": [
         r"use\s*case",
         r"real\s*life",
-        r"example",
-        r"application",
+        r"real\s*world\s*example",
         r"उपयोग",
         r"उदाहरण",
         r"वापर",
@@ -124,9 +141,24 @@ def reset_session(sid):
 
 
 def _narrate(fixed_text, lang="en"):
+    if not os.environ.get("USE_OLLAMA_NARRATION", "0").lower() in ("1", "true", "yes"):
+        return fixed_text
     system = SYSTEM_PROMPT + f" Respond in {lang}."
     narrated = ask_ollama(fixed_text, system=system, trace=tracer)
     return narrated if narrated else fixed_text
+
+
+def _voice_short(text, max_len=220):
+    """Shorten long text for TTS — keep first sentence(s) under max_len."""
+    text = re.sub(r"\s+", " ", text).strip()
+    if len(text) <= max_len:
+        return text
+    cut = text[:max_len]
+    for sep in (". ", "। ", "? ", "! "):
+        idx = cut.rfind(sep)
+        if idx > 60:
+            return cut[: idx + 1].strip()
+    return cut.rstrip() + "…"
 
 
 def _parse_membership(text):
@@ -191,6 +223,14 @@ def _is_help(text):
     return _matches_any(text, list(HELP_WORDS.values()))
 
 
+def _is_stop(text):
+    return _matches_any(text, list(STOP_WORDS.values()))
+
+
+def _is_change_language(text):
+    return _matches_any(text, list(CHANGE_LANG_WORDS.values()))
+
+
 def _detect_qa_topic(text):
     t = _norm(text)
     for topic, patterns in QA_PATTERNS.items():
@@ -200,14 +240,18 @@ def _detect_qa_topic(text):
     return None
 
 
-def _reply(s, text, data=None, lang=None):
+def _reply(s, text, data=None, lang=None, action=None, voice_reply=None):
     lang = lang or s.get("lang") or "en"
-    return {
+    payload = {
         "reply": text,
+        "voice_reply": voice_reply if voice_reply is not None else _voice_short(text),
         "stage": s["stage"],
         "language": lang,
         "data": data,
-    }, 200
+    }
+    if action:
+        payload["action"] = action
+    return payload, 200
 
 
 def _full_results_payload(s):
@@ -228,12 +272,12 @@ def _answer_qa(s, topic):
         body = get_topic(lang, "what_is_fuzzy_logic")
     elif topic == "architecture":
         body = get_topic(lang, "architecture_intro")
-        data["diagram"] = ARCHITECTURE_DIAGRAM.strip()
+        data["diagram"] = FUZZY_LOGIC_ARCHITECTURE_DIAGRAM.strip()
         data["diagram_title"] = {
-            "en": "Fuzzy Logic Tutor — Architecture",
-            "hi": "फ़ज़ी लॉजिक ट्यूटर — आर्किटेक्चर",
-            "mr": "फझी लॉजिक ट्यूटर — आर्किटेक्चर",
-        }.get(lang, "Architecture")
+            "en": "Fuzzy Logic System Architecture",
+            "hi": "फ़ज़ी लॉजिक सिस्टम आर्किटेक्चर",
+            "mr": "फझी लॉजिक सिस्टम आर्किटेक्चर",
+        }.get(lang, "Fuzzy Logic Architecture")
     elif topic == "use_cases":
         body = get_topic(lang, "use_cases")
     elif topic == "advantages_disadvantages":
@@ -242,7 +286,8 @@ def _answer_qa(s, topic):
         body = get_topic(lang, "what_is_fuzzy_logic")
 
     reply = f"{msg(lang, 'qa_ack')} {body}"
-    return _reply(s, reply, data=data)
+    voice = _voice_short(body, max_len=280)
+    return _reply(s, reply, data=data, voice_reply=f"{msg(lang, 'qa_ack')} {voice}")
 
 
 def _handle_qa_or_help(s, text):
@@ -258,10 +303,21 @@ def _handle_qa_or_help(s, text):
 def process_message(sid, text):
     s = SESSIONS.get(sid)
     if not s:
-        return {"error": "Session not found"}, 404
+        return {"error": "Session not found", "recoverable": True}, 404
 
     text = (text or "").strip()
     stage = s["stage"]
+    lang = s.get("lang") or "en"
+
+    # ---- global: stop (any stage) ----
+    if _is_stop(text):
+        return _reply(s, msg(lang, "stopped"), action="stop")
+
+    # ---- global: change language (any stage except first pick) ----
+    if stage != "ASK_LANGUAGE" and _is_change_language(text):
+        s["stage"] = "ASK_LANGUAGE"
+        s["lang"] = None
+        return _reply(s, msg("en", "change_language"), lang="en", action="change_language")
 
     # global restart (except during language selection)
     if stage != "ASK_LANGUAGE" and _is_restart(text):
@@ -284,8 +340,6 @@ def process_message(sid, text):
         return _reply(s, msg(code, "language_set"), lang=code)
 
     lang = s.get("lang") or "en"
-
-    # help / Q&A available in MAIN and after DONE
     if stage in ("MAIN", "DONE"):
         if _is_start_calc(text):
             s["stage"] = "ASK_COUNT"
@@ -405,8 +459,9 @@ def process_message(sid, text):
             s["results"]["complement_a"], s["results"]["complement_b"], result,
         )
         result_set = format_set(s["universe"], result)
+        brief = f"{meta['name']}. {meta['formula']}. Result {result_set}."
         narration = _narrate(
-            f"{meta['name']}. Formula: {meta['formula']}. {meta['explanation']}",
+            f"{meta['name']}. {meta['explanation']}",
             lang=lang,
         )
         s["op_index"] += 1
@@ -419,12 +474,14 @@ def process_message(sid, text):
             "result_set": result_set,
         }
         reply_text = (
-            f"{narration} "
+            f"{meta['name']}. Formula: {meta['formula']}. "
             + "; ".join(steps)
-            + f". {meta['name']} = {result_set}."
+            + f". Result: {result_set}."
         )
+        voice_text = f"{narration} Result {result_set}."
         if s["op_index"] < len(OPERATIONS_ORDER):
             reply_text += f" {msg(lang, 'say_next')}"
-        return _reply(s, reply_text, data=payload)
+            voice_text += f" {msg(lang, 'say_next')}"
+        return _reply(s, reply_text, data=payload, voice_reply=_voice_short(voice_text, 200))
 
     return _reply(s, msg(lang, "confused"))

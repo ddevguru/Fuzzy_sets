@@ -1,43 +1,46 @@
 """Educational content about fuzzy logic in English, Hindi, and Marathi."""
 
-ARCHITECTURE_DIAGRAM = """
-┌─────────────────────────────────────────────────────────────┐
-│                    FLUTTER MOBILE APP                        │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │
-│  │ Speech-to-  │  │ Text-to-    │  │  Chat UI + Formula  │  │
-│  │ Text (Mic)  │  │ Speech      │  │  Cards + Diagrams   │  │
-│  └──────┬──────┘  └──────▲──────┘  └──────────┬──────────┘  │
-│         │                │                     │             │
-│         └────────────────┼─────────────────────┘             │
-│                          │ REST API (JSON)                   │
-└──────────────────────────┼───────────────────────────────────┘
-                           ▼
-┌─────────────────────────────────────────────────────────────┐
-│              PYTHON FLASK BACKEND (Google Cloud)             │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │           Conversation Manager (State Machine)        │   │
-│  │  • Language selection (EN / HI / MR)                  │   │
-│  │  • Voice command parsing                              │   │
-│  │  • Q&A about fuzzy logic                              │   │
-│  └────────┬─────────────────────────────┬───────────────┘   │
-│           │                             │                    │
-│           ▼                             ▼                    │
-│  ┌─────────────────┐          ┌─────────────────────┐       │
-│  │  fuzzy_logic.py │          │   knowledge.py      │       │
-│  │  (Deterministic │          │   Explanations,     │       │
-│  │   Math — 9 ops) │          │   Diagrams, Use Cases│       │
-│  └─────────────────┘          └─────────────────────┘       │
-└─────────────────────────────────────────────────────────────┘
+FUZZY_LOGIC_ARCHITECTURE_DIAGRAM = """
+╔══════════════════════════════════════════════════════════════╗
+║           FUZZY LOGIC SYSTEM ARCHITECTURE                     ║
+╚══════════════════════════════════════════════════════════════╝
 
-FUZZY LOGIC CONCEPT FLOW:
-  Crisp Input → Fuzzification → Fuzzy Rules → Inference → Defuzzification → Output
+  ┌──────────────┐      ┌─────────────────┐      ┌──────────────┐
+  │ CRISP INPUT  │─────▶│  FUZZIFICATION  │─────▶│  FUZZY SETS  │
+  │ Sensors,     │      │ Membership      │      │ μ(x) ∈ [0,1] │
+  │ user data    │      │ Functions       │      │ per variable │
+  └──────────────┘      └─────────────────┘      └──────┬───────┘
+                                                        │
+                                                        ▼
+  ┌──────────────┐      ┌─────────────────┐      ┌──────────────┐
+  │ CRISP OUTPUT │◀─────│ DEFUZZIFICATION │◀─────│  INFERENCE   │
+  │ Motor speed, │      │ Centroid / MOM  │      │ Fuzzy Rules  │
+  │ valve, etc.  │      │ / Weighted avg  │      │ IF-THEN      │
+  └──────────────┘      └─────────────────┘      └──────▲───────┘
+                                                        │
+                                                 ┌──────┴───────┐
+                                                 │ KNOWLEDGE    │
+                                                 │ BASE (Rules) │
+                                                 └──────────────┘
 
-FUZZY SET OPERATIONS (this app):
-  Universe U = {x1, x2, ...}
-  Set A = { μA(x1)/x1 + μA(x2)/x2 + ... }
-  Set B = { μB(x1)/x1 + μB(x2)/x2 + ... }
-  Operations: Union, Intersection, Complement, Difference,
-               Algebraic Sum/Product, Bounded Sum/Difference
+MEMBERSHIP FUNCTION SHAPES:
+  ▲     ▲▲      ∩∩∩       ⌒⌒
+  Triangular  Trapezoidal  Gaussian  Bell
+
+CLASSICAL vs FUZZY SET:
+  Classical: x ∈ A  →  {0, 1} only
+  Fuzzy:     x ∈ A  →  μA(x) = 0.0 … 1.0
+
+FUZZY SET OPERATIONS (Zadeh):
+  Union A∪B:        μ = max(μA, μB)
+  Intersection A∩B: μ = min(μA, μB)
+  Complement A':    μ = 1 - μA
+  Difference A-B:   μ = min(μA, 1-μB)
+
+EXAMPLE — AC Temperature Control:
+  Input:  Temp=28°C → Fuzzify → {Hot:0.6, Warm:0.4}
+  Rules:  IF Hot THEN Fan=Fast
+  Output: Defuzzify → Fan speed = 72%
 """
 
 CONTENT = {
@@ -79,13 +82,12 @@ CONTENT = {
             "rules can become complex without careful design."
         ),
         "architecture_intro": (
-            "Here is the architecture of this fuzzy logic tutor system. "
-            "The Flutter app on your phone handles voice input and output. "
-            "It sends your spoken words as text to the Python Flask backend on "
-            "Google Cloud. The backend has a conversation manager that understands "
-            "your language and voice commands. All fuzzy math is computed in pure "
-            "Python so numbers are always correct. Educational answers come from a "
-            "built-in knowledge base. See the diagram on screen for the full picture."
+            "Here is the architecture of a fuzzy logic control system. "
+            "First, crisp real-world inputs like temperature or speed are converted "
+            "into fuzzy sets through fuzzification using membership functions. "
+            "Then fuzzy IF-THEN rules in the knowledge base perform inference. "
+            "Finally defuzzification converts the fuzzy result back to a crisp output "
+            "like motor speed or valve position. See the diagram on screen."
         ),
     },
     "hi": {
@@ -119,11 +121,10 @@ CONTENT = {
             "जहाँ कानूनी या वैज्ञानिक सटीकता ज़रूरी है, वहाँ यह कम उपयुक्त है।"
         ),
         "architecture_intro": (
-            "यह है इस फ़ज़ी लॉजिक ट्यूटर सिस्टम का आर्किटेक्चर। "
-            "आपके फोन पर Flutter ऐप वॉइस इनपुट और आउटपुट संभालता है। "
-            "यह Google Cloud पर Python Flask बैकएंड को टेक्स्ट भेजता है। "
-            "बैकएंड में कन्वर्सेशन मैनेजर आपकी भाषा और वॉइस कमांड समझता है। "
-            "सारी फ़ज़ी गणित pure Python में होती है ताकि संख्याएँ हमेशा सही रहें। "
+            "यह है फ़ज़ी लॉजिक कंट्रोल सिस्टम का आर्किटेक्चर। "
+            "पहले crisp इनपुट जैसे तापमान को membership functions से fuzzification करके "
+            "fuzzy sets में बदला जाता है। फिर knowledge base के IF-THEN rules से inference होता है। "
+            "अंत में defuzzification से crisp आउटपुट जैसे मोटर स्पीड मिलती है। "
             "स्क्रीन पर डायग्राम देखें।"
         ),
     },
@@ -157,11 +158,10 @@ CONTENT = {
             "जिथे कायदेशीर किंवा वैज्ञानिक अचूकता आवश्यक आहे तिथे कमी योग्य आहे."
         ),
         "architecture_intro": (
-            "हे आहे या फझी लॉजिक ट्यूटर सिस्टमचे आर्किटेक्चर. "
-            "तुमच्या फोनवरील Flutter अॅप व्हॉइस इनपुट आणि आउटपुट हाताळते. "
-            "ते Google Cloud वरील Python Flask बॅकएंडला मजकूर पाठवते. "
-            "बॅकएंडमध्ये कन्व्हर्सेशन मॅनेजर तुमची भाषा आणि व्हॉइस कमांड समजतो. "
-            "सर्व फझी गणित pure Python मध्ये होते म्हणून संख्या नेहमी बरोबर असतात. "
+            "हे आहे फझी लॉजिक कंट्रोल सिस्टमचे आर्किटेक्चर. "
+            "प्रथम crisp इनपुट जसे तापमान membership functions द्वारे fuzzification करून "
+            "fuzzy sets मध्ये रूपांतरित होते. नंतर knowledge base मधील IF-THEN rules ने inference होते. "
+            "शेवटी defuzzification ने crisp आउटपुट जसे मोटर स्पीड मिळते. "
             "स्क्रीनवरील आकृती पहा."
         ),
     },

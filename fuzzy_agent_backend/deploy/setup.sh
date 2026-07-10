@@ -62,7 +62,8 @@ Environment="PATH=${BACKEND_DIR}/venv/bin"
 Environment="PORT=5000"
 Environment="OLLAMA_HOST=http://localhost:11434"
 Environment="OLLAMA_MODEL=${OLLAMA_MODEL}"
-ExecStart=${BACKEND_DIR}/venv/bin/gunicorn --bind 0.0.0.0:5000 --workers 2 --timeout 120 app:app
+Environment="USE_OLLAMA_NARRATION=0"
+ExecStart=${BACKEND_DIR}/venv/bin/gunicorn --bind 0.0.0.0:5000 --workers 1 --timeout 120 --preload app:app
 Restart=always
 RestartSec=5
 

@@ -1,7 +1,13 @@
 class ChatMessage {
   final String text;
   final bool isUser;
+  final bool isError;
   final Map<String, dynamic>? data;
 
-  ChatMessage({required this.text, required this.isUser, this.data});
+  ChatMessage({
+    required this.text,
+    required this.isUser,
+    this.isError = false,
+    this.data,
+  });
 }
