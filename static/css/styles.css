@@ -1,0 +1,351 @@
+@import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  --bg: #FAF9F5;
+  --surface: #FFFFFF;
+  --ink: #21242A;
+  --muted: #62676F;
+  --border: #E3E0D6;
+  --accent: #3D5A73;
+  --accent-soft: #EBF0F3;
+  --line: #D8D4C8;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'Inter', system-ui, sans-serif;
+  line-height: 1.6;
+  font-size: 15.5px;
+}
+
+h1, h2, h3 {
+  font-family: 'Source Serif 4', Georgia, serif;
+  font-weight: 600;
+  color: var(--ink);
+  margin: 0 0 0.4em 0;
+}
+
+.wrap {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 0 28px 90px;
+}
+
+/* ---------- Header ---------- */
+header.site {
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+header.site .wrap {
+  padding-top: 40px;
+  padding-bottom: 32px;
+}
+
+.eyebrow {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 10px;
+}
+
+header.site h1 {
+  font-size: 34px;
+}
+
+header.site p.sub {
+  color: var(--muted);
+  font-size: 16px;
+  max-width: 560px;
+  margin-top: 8px;
+}
+
+/* ---------- Sections ---------- */
+section {
+  margin-top: 56px;
+}
+
+section > h2 {
+  font-size: 22px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 12px;
+  margin-bottom: 24px;
+}
+
+section > p.lead {
+  color: var(--muted);
+  max-width: 620px;
+  margin-bottom: 24px;
+}
+
+/* ---------- Formula cards ---------- */
+.formula-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 620px) {
+  .formula-grid { grid-template-columns: 1fr; }
+}
+
+.formula-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 18px 20px;
+}
+
+.formula-card .name {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 6px;
+}
+
+.formula-card .expr {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 15px;
+  background: var(--accent-soft);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.formula-card .desc {
+  color: var(--muted);
+  font-size: 13.5px;
+}
+
+/* ---------- Form ---------- */
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 28px;
+}
+
+label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+
+input[type="number"], input[type="text"] {
+  width: 100%;
+  padding: 9px 11px;
+  font-family: 'Inter', sans-serif;
+  font-size: 14.5px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: #fff;
+  color: var(--ink);
+}
+
+input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.n-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  max-width: 320px;
+}
+
+.n-row .field { flex: 1; }
+
+button, .btn {
+  font-family: 'Inter', sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: #fff;
+  padding: 10px 18px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+button:hover, .btn:hover {
+  background: #314a5f;
+}
+
+button.secondary, .btn.secondary {
+  background: transparent;
+  color: var(--accent);
+}
+
+button.secondary:hover, .btn.secondary:hover {
+  background: var(--accent-soft);
+}
+
+table.entry-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 22px;
+}
+
+table.entry-table th {
+  text-align: left;
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 500;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+table.entry-table td {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+table.entry-table input {
+  padding: 7px 9px;
+  font-size: 14px;
+}
+
+.hint {
+  font-size: 12.5px;
+  color: var(--muted);
+  margin-top: 6px;
+}
+
+.actions {
+  margin-top: 24px;
+  display: flex;
+  gap: 12px;
+}
+
+#step2 { display: none; }
+
+/* ---------- Results ---------- */
+.set-block {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 16px 20px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.set-block .label {
+  font-family: 'Source Serif 4', serif;
+  font-weight: 600;
+  min-width: 150px;
+  color: var(--ink);
+}
+
+.set-block .value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  color: var(--accent);
+  word-break: break-word;
+}
+
+.op-block {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  margin-bottom: 26px;
+  overflow: hidden;
+}
+
+.op-block .op-head {
+  background: var(--accent-soft);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.op-block .op-head h3 {
+  font-size: 16px;
+  margin: 0;
+}
+
+.op-block .op-head .formula {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  color: var(--accent);
+}
+
+.op-block table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.op-block th {
+  text-align: left;
+  font-size: 11.5px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 500;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.op-block td {
+  padding: 9px 20px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13.5px;
+}
+
+.op-block tr:last-child td { border-bottom: none; }
+
+.op-block td.calc {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--muted);
+}
+
+.op-block td.result {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.op-block .final {
+  padding: 14px 20px;
+  border-top: 1px solid var(--line);
+  background: var(--accent-soft);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13.5px;
+}
+
+.op-block .final b {
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  margin-right: 8px;
+}
+
+footer.site {
+  text-align: center;
+  color: var(--muted);
+  font-size: 12.5px;
+  padding: 40px 0;
+}

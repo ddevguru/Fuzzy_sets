@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fuzzy Set Operations</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap">
+    <div class="eyebrow">Fuzzy Logic · Reference &amp; Calculator</div>
+    <h1>Fuzzy Set Operations</h1>
+    <p class="sub">A short reference on how union, intersection, complement and the algebraic
+    operators are defined on fuzzy sets — followed by a calculator that applies the same
+    formulas to a set you enter, one element at a time.</p>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <section>
+    <h2>What is a fuzzy set?</h2>
+    <p class="lead">
+      In an ordinary (crisp) set, an element either belongs or it doesn't. A fuzzy set relaxes
+      this: every element <em>x</em> of the universe is assigned a <strong>membership value</strong>
+      μ(x) between 0 and 1, describing the degree to which it belongs. A fuzzy set is written as
+    </p>
+    <div class="formula-card" style="max-width:420px;">
+      <div class="expr">A = { μ&#8321;/x&#8321; + μ&#8322;/x&#8322; + &hellip; + μ&#8345;/x&#8345; }</div>
+      <div class="desc">Each term pairs an element of the universe with its membership degree.</div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Standard operations</h2>
+    <p class="lead">Given two fuzzy sets A and B on the same universe X, with membership
+    functions μ<sub>A</sub>(x) and μ<sub>B</sub>(x):</p>
+
+    <div class="formula-grid">
+
+      <div class="formula-card">
+        <div class="name">Union &nbsp;A ∪ B</div>
+        <div class="expr">μ<sub>A∪B</sub>(x) = max{ μ<sub>A</sub>(x), μ<sub>B</sub>(x) }</div>
+        <div class="desc">Take the larger of the two membership values at each element.</div>
+      </div>
+
+      <div class="formula-card">
+        <div class="name">Intersection &nbsp;A ∩ B</div>
+        <div class="expr">μ<sub>A∩B</sub>(x) = min{ μ<sub>A</sub>(x), μ<sub>B</sub>(x) }</div>
+        <div class="desc">Take the smaller of the two membership values at each element.</div>
+      </div>
+
+      <div class="formula-card">
+        <div class="name">Complement &nbsp;Ā</div>
+        <div class="expr">μ<sub>Ā</sub>(x) = 1 &minus; μ<sub>A</sub>(x)</div>
+        <div class="desc">The degree to which x does <em>not</em> belong to A.</div>
+      </div>
+
+      <div class="formula-card">
+        <div class="name">Difference &nbsp;A | B</div>
+        <div class="expr">A|B = A ∩ B&#772; = min{ μ<sub>A</sub>(x), 1&minus;μ<sub>B</sub>(x) }</div>
+        <div class="desc">Intersection of A with the complement of B.</div>
+      </div>
+
+      <div class="formula-card">
+        <div class="name">Algebraic sum &nbsp;A + B</div>
+        <div class="expr">μ<sub>A+B</sub> = [μ<sub>A</sub>+μ<sub>B</sub>] &minus; [μ<sub>A</sub>&middot;μ<sub>B</sub>]</div>
+        <div class="desc">Sum minus the overlap — keeps the result within [0, 1].</div>
+      </div>
+
+      <div class="formula-card">
+        <div class="name">Algebraic product &nbsp;A · B</div>
+        <div class="expr">μ<sub>A·B</sub>(x) = μ<sub>A</sub>(x) &middot; μ<sub>B</sub>(x)</div>
+        <div class="desc">Plain multiplication of the two membership values.</div>
+      </div>
+
+      <div class="formula-card">
+        <div class="name">Bounded sum &nbsp;A ⊕ B</div>
+        <div class="expr">μ<sub>A⊕B</sub>(x) = min{ 1, μ<sub>A</sub>(x)+μ<sub>B</sub>(x) }</div>
+        <div class="desc">Ordinary sum, capped at 1 so it never overflows.</div>
+      </div>
+
+      <div class="formula-card">
+        <div class="name">Bounded difference &nbsp;A ⊖ B</div>
+        <div class="expr">μ<sub>A⊙B</sub>(x) = max{ 0, μ<sub>A</sub>(x)&minus;μ<sub>B</sub>(x) }</div>
+        <div class="desc">Ordinary difference, floored at 0 so it never goes negative.</div>
+      </div>
+
+    </div>
+  </section>
+
+  <section>
+    <h2>Try it yourself</h2>
+    <p class="lead">Enter the size of the universe, then fill in each element with its
+    membership values in A and B. Every operation above will be computed step by step.</p>
+
+    <div class="panel">
+
+      <div id="step1">
+        <div class="n-row">
+          <div class="field">
+            <label for="n">Number of elements</label>
+            <input type="number" id="n" min="1" max="12" value="4">
+          </div>
+          <button type="button" onclick="buildTable()">Build table</button>
+        </div>
+        <p class="hint">Choose how many elements are in the universe X (up to 12).</p>
+      </div>
+
+      <div id="step2">
+        <form action="/calculate" method="POST" id="calcForm">
+          <input type="hidden" name="n" id="n_hidden">
+          <table class="entry-table">
+            <thead>
+              <tr>
+                <th style="width:34%">Element (x)</th>
+                <th style="width:33%">μ<sub>A</sub>(x)</th>
+                <th style="width:33%">μ<sub>B</sub>(x)</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+          <p class="hint">Membership values must be between 0 and 1 (e.g. 0.2, 0.75, 1).</p>
+          <div class="actions">
+            <button type="submit">Calculate all operations</button>
+            <button type="button" class="secondary" onclick="resetForm()">Start over</button>
+          </div>
+        </form>
+      </div>
+
+    </div>
+  </section>
+
+</div>
+
+<footer class="site">Fuzzy Set Operations &middot; reference and calculator</footer>
+
+<script>
+function buildTable() {
+  const n = parseInt(document.getElementById('n').value);
+  if (!n || n < 1) { alert('Enter a number of elements of at least 1.'); return; }
+
+  document.getElementById('n_hidden').value = n;
+  const body = document.getElementById('tableBody');
+  body.innerHTML = '';
+
+  for (let i = 0; i < n; i++) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input type="text" name="element_${i}" placeholder="${i + 1}"></td>
+      <td><input type="number" name="a_${i}" step="0.01" min="0" max="1" required></td>
+      <td><input type="number" name="b_${i}" step="0.01" min="0" max="1" required></td>
+    `;
+    body.appendChild(tr);
+  }
+
+  document.getElementById('step1').style.display = 'none';
+  document.getElementById('step2').style.display = 'block';
+}
+
+function resetForm() {
+  document.getElementById('step2').style.display = 'none';
+  document.getElementById('step1').style.display = 'block';
+  document.getElementById('tableBody').innerHTML = '';
+}
+</script>
+
+</body>
+</html>

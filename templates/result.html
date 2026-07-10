@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Results · Fuzzy Set Operations</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap">
+    <div class="eyebrow">Fuzzy Logic · Result</div>
+    <h1>Calculation Results</h1>
+    <p class="sub">Every operation applied to your {{ n }}-element universe, computed one
+    element at a time using the formulas from the reference page.</p>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <section style="margin-top:40px;">
+    <h2>Your input sets</h2>
+    <div class="set-block">
+      <div class="label">Set A</div>
+      <div class="value">{ {{ result_sets.A }} }</div>
+    </div>
+    <div class="set-block">
+      <div class="label">Set B</div>
+      <div class="value">{ {{ result_sets.B }} }</div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Step-by-step operations</h2>
+
+    <!-- Complement of A -->
+    <div class="op-block">
+      <div class="op-head">
+        <h3>Complement of A &nbsp;(Ā)</h3>
+        <div class="formula">μ<sub>Ā</sub>(x) = 1 &minus; μ<sub>A</sub>(x)</div>
+      </div>
+      <table>
+        <thead><tr><th>x</th><th>μ<sub>A</sub>(x)</th><th>Calculation</th><th>Result</th></tr></thead>
+        <tbody>
+          {% for row in rows %}
+          <tr>
+            <td>{{ row.x }}</td>
+            <td>{{ row.a }}</td>
+            <td class="calc">{{ row.ac_calc | safe }}</td>
+            <td class="result">{{ row.ac }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <div class="final"><b>Ā =</b> { {{ result_sets.A_comp }} }</div>
+    </div>
+
+    <!-- Complement of B -->
+    <div class="op-block">
+      <div class="op-head">
+        <h3>Complement of B &nbsp;(B̄)</h3>
+        <div class="formula">μ<sub>B̄</sub>(x) = 1 &minus; μ<sub>B</sub>(x)</div>
+      </div>
+      <table>
+        <thead><tr><th>x</th><th>μ<sub>B</sub>(x)</th><th>Calculation</th><th>Result</th></tr></thead>
+        <tbody>
+          {% for row in rows %}
+          <tr>
+            <td>{{ row.x }}</td>
+            <td>{{ row.b }}</td>
+            <td class="calc">{{ row.bc_calc | safe }}</td>
+            <td class="result">{{ row.bc }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <div class="final"><b>B̄ =</b> { {{ result_sets.B_comp }} }</div>
+    </div>
+
+    <!-- Union -->
+    <div class="op-block">
+      <div class="op-head">
+        <h3>Union &nbsp;(A ∪ B)</h3>
+        <div class="formula">μ<sub>A∪B</sub>(x) = max{ μ<sub>A</sub>(x), μ<sub>B</sub>(x) }</div>
+      </div>
+      <table>
+        <thead><tr><th>x</th><th>μ<sub>A</sub>(x)</th><th>μ<sub>B</sub>(x)</th><th>Calculation</th><th>Result</th></tr></thead>
+        <tbody>
+          {% for row in rows %}
+          <tr>
+            <td>{{ row.x }}</td>
+            <td>{{ row.a }}</td>
+            <td>{{ row.b }}</td>
+            <td class="calc">{{ row.union_calc }}</td>
+            <td class="result">{{ row.union }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <div class="final"><b>A ∪ B =</b> { {{ result_sets.union }} }</div>
+    </div>
+
+    <!-- Intersection -->
+    <div class="op-block">
+      <div class="op-head">
+        <h3>Intersection &nbsp;(A ∩ B)</h3>
+        <div class="formula">μ<sub>A∩B</sub>(x) = min{ μ<sub>A</sub>(x), μ<sub>B</sub>(x) }</div>
+      </div>
+      <table>
+        <thead><tr><th>x</th><th>μ<sub>A</sub>(x)</th><th>μ<sub>B</sub>(x)</th><th>Calculation</th><th>Result</th></tr></thead>
+        <tbody>
+          {% for row in rows %}
+          <tr>
+            <td>{{ row.x }}</td>
+            <td>{{ row.a }}</td>
+            <td>{{ row.b }}</td>
+            <td class="calc">{{ row.inter_calc }}</td>
+            <td class="result">{{ row.inter }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <div class="final"><b>A ∩ B =</b> { {{ result_sets.intersection }} }</div>
+    </div>
+
+    <!-- Difference -->
+    <div class="op-block">
+      <div class="op-head">
+        <h3>Difference &nbsp;(A | B)</h3>
+        <div class="formula">A|B = A ∩ B̄ = min{ μ<sub>A</sub>(x), 1&minus;μ<sub>B</sub>(x) }</div>
+      </div>
+      <table>
+        <thead><tr><th>x</th><th>μ<sub>A</sub>(x)</th><th>μ<sub>B̄</sub>(x)</th><th>Calculation</th><th>Result</th></tr></thead>
+        <tbody>
+          {% for row in rows %}
+          <tr>
+            <td>{{ row.x }}</td>
+            <td>{{ row.a }}</td>
+            <td>{{ row.bc }}</td>
+            <td class="calc">{{ row.diff_calc | safe }}</td>
+            <td class="result">{{ row.diff }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <div class="final"><b>A | B =</b> { {{ result_sets.difference }} }</div>
+    </div>
+
+    <!-- Algebraic Sum -->
+    <div class="op-block">
+      <div class="op-head">
+        <h3>Algebraic Sum &nbsp;(A + B)</h3>
+        <div class="formula">μ<sub>A+B</sub> = [μ<sub>A</sub>+μ<sub>B</sub>] &minus; [μ<sub>A</sub>&middot;μ<sub>B</sub>]</div>
+      </div>
+      <table>
+        <thead><tr><th>x</th><th>μ<sub>A</sub>(x)</th><th>μ<sub>B</sub>(x)</th><th>Calculation</th><th>Result</th></tr></thead>
+        <tbody>
+          {% for row in rows %}
+          <tr>
+            <td>{{ row.x }}</td>
+            <td>{{ row.a }}</td>
+            <td>{{ row.b }}</td>
+            <td class="calc">{{ row.asum_calc | safe }}</td>
+            <td class="result">{{ row.asum }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <div class="final"><b>A + B =</b> { {{ result_sets.alg_sum }} }</div>
+    </div>
+
+    <!-- Algebraic Product -->
+    <div class="op-block">
+      <div class="op-head">
+        <h3>Algebraic Product &nbsp;(A · B)</h3>
+        <div class="formula">μ<sub>A·B</sub>(x) = μ<sub>A</sub>(x) &middot; μ<sub>B</sub>(x)</div>
+      </div>
+      <table>
+        <thead><tr><th>x</th><th>μ<sub>A</sub>(x)</th><th>μ<sub>B</sub>(x)</th><th>Calculation</th><th>Result</th></tr></thead>
+        <tbody>
+          {% for row in rows %}
+          <tr>
+            <td>{{ row.x }}</td>
+            <td>{{ row.a }}</td>
+            <td>{{ row.b }}</td>
+            <td class="calc">{{ row.aprod_calc | safe }}</td>
+            <td class="result">{{ row.aprod }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <div class="final"><b>A &middot; B =</b> { {{ result_sets.alg_product }} }</div>
+    </div>
+
+    <!-- Bounded Sum -->
+    <div class="op-block">
+      <div class="op-head">
+        <h3>Bounded Sum &nbsp;(A ⊕ B)</h3>
+        <div class="formula">μ<sub>A⊕B</sub>(x) = min{ 1, μ<sub>A</sub>(x)+μ<sub>B</sub>(x) }</div>
+      </div>
+      <table>
+        <thead><tr><th>x</th><th>μ<sub>A</sub>(x)</th><th>μ<sub>B</sub>(x)</th><th>Calculation</th><th>Result</th></tr></thead>
+        <tbody>
+          {% for row in rows %}
+          <tr>
+            <td>{{ row.x }}</td>
+            <td>{{ row.a }}</td>
+            <td>{{ row.b }}</td>
+            <td class="calc">{{ row.bsum_calc }}</td>
+            <td class="result">{{ row.bsum }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <div class="final"><b>A ⊕ B =</b> { {{ result_sets.bounded_sum }} }</div>
+    </div>
+
+    <!-- Bounded Difference -->
+    <div class="op-block">
+      <div class="op-head">
+        <h3>Bounded Difference &nbsp;(A ⊖ B)</h3>
+        <div class="formula">μ<sub>A⊙B</sub>(x) = max{ 0, μ<sub>A</sub>(x)&minus;μ<sub>B</sub>(x) }</div>
+      </div>
+      <table>
+        <thead><tr><th>x</th><th>μ<sub>A</sub>(x)</th><th>μ<sub>B</sub>(x)</th><th>Calculation</th><th>Result</th></tr></thead>
+        <tbody>
+          {% for row in rows %}
+          <tr>
+            <td>{{ row.x }}</td>
+            <td>{{ row.a }}</td>
+            <td>{{ row.b }}</td>
+            <td class="calc">{{ row.bdiff_calc }}</td>
+            <td class="result">{{ row.bdiff }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <div class="final"><b>A ⊖ B =</b> { {{ result_sets.bounded_diff }} }</div>
+    </div>
+
+  </section>
+
+  <div class="actions" style="margin-bottom:40px;">
+    <a class="btn" href="/">Calculate another set</a>
+  </div>
+
+</div>
+
+<footer class="site">Fuzzy Set Operations &middot; reference and calculator</footer>
+
+</body>
+</html>
