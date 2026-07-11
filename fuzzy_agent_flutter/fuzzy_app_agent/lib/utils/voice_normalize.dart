@@ -50,12 +50,17 @@ class VoiceNormalize {
     }
 
     lower = lower.replaceAll(",", ".");
-    lower = lower.replaceAll(RegExp(r'\s+'), "");
 
-    // "x 1" / "ex one" → x1
-    lower = lower.replaceAll(RegExp(r'^(ex|x)(\d+)$', caseSensitive: false), r'x$2');
+    // Compact only numeric input — keep spaces for voice commands like "start calculation"
+    final compact = lower.replaceAll(RegExp(r'\s+'), "");
+    if (looksLikeCount(compact) || looksLikeMembership(compact)) {
+      return compact.replaceAll(RegExp(r'^(ex|x)(\d+)$', caseSensitive: false), r'x$2');
+    }
 
-    return lower.isNotEmpty ? lower : raw.trim();
+    // "x 1" / "ex one" → x1 for element names
+    final spaced = lower.replaceAll(RegExp(r'\s+'), " ").trim();
+    final element = spaced.replaceAll(RegExp(r'^(ex|x)\s*(\d+)$', caseSensitive: false), r'x$2');
+    return element.isNotEmpty ? element : raw.trim();
   }
 
   static bool looksLikeCount(String normalized) => RegExp(r'^\d+$').hasMatch(normalized);

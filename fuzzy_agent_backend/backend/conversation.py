@@ -38,14 +38,21 @@ RESTART_WORDS = {
 }
 
 START_CALC_WORDS = {
-    "en": ["start calculation", "calculate", "start calc", "begin calculation", "compute"],
+    "en": [
+        "start calculation", "startcalculation", "start calculating", "startcalculating",
+        "calculate", "calculating", "calculation", "start calc", "startcalc",
+        "begin calculation", "begincalculation", "compute", "lets calculate",
+        "let's calculate", "do calculation",
+    ],
     "hi": [
-        "start calculation", "calculate", "ganana", "ganana shuru",
-        "गणना", "गणना शुरू", "गणना शुरू करो", "कैलकुलेट",
+        "start calculation", "startcalculation", "calculate", "ganana", "ganana shuru",
+        "gananashuru", "shuru karo", "shurukaro", "ganana shuru karo",
+        "गणना", "गणना शुरू", "गणना शुरू करो", "गणनाशुरू", "कैलकुलेट", "कैलकुलेशन",
     ],
     "mr": [
-        "start calculation", "calculate", "ganana", "ganana suru",
-        "गणना", "गणना सुरू", "गणना सुरू करा",
+        "start calculation", "startcalculation", "calculate", "ganana", "ganana suru",
+        "gananasuru", "suru kara", "surukara",
+        "गणना", "गणना सुरू", "गणना सुरू करा", "गणनासुरू",
     ],
 }
 
@@ -172,20 +179,46 @@ def _voice_short(text, max_len=220):
     return cut.rstrip() + "…"
 
 
-def _parse_membership(text):
-    # support spoken decimals: "zero point seven", "point seven"
-    t = text.lower().strip()
+def _normalize_spoken_numbers(text):
+    """Turn voice like 'three', 'zero point seven', '०.७' into '3', '0.7'."""
+    t = (text or "").strip().lower()
+    for i, ch in enumerate("०१२३४५६७८९"):
+        t = t.replace(ch, str(i))
     spoken = {
-        "zero": "0", "one": "1", "two": "2", "three": "3", "four": "4",
-        "five": "5", "six": "6", "seven": "7", "eight": "8", "nine": "9",
-        "point": ".", "dot": ".",
-        "शून्य": "0", "एक": "1", "दो": "2", "तीन": "3", "चार": "4",
-        "पांच": "5", "छह": "6", "सात": "7", "आठ": "8", "नौ": "9",
-        "बिंदु": ".", "दशांश": ".",
+        "zero": "0", "oh": "0", "one": "1", "two": "2", "three": "3", "four": "4",
+        "five": "5", "six": "6", "seven": "7", "eight": "8", "nine": "9", "ten": "10",
+        "point": ".", "dot": ".", "decimal": ".",
+        "शून्य": "0", "एक": "1", "दो": "2", "दोन": "2", "तीन": "3", "चार": "4",
+        "पांच": "5", "पाच": "5", "छह": "6", "सात": "7", "आठ": "8", "नौ": "9",
+        "दहा": "10", "बिंदु": ".", "दशांश": ".",
     }
-    for word, digit in spoken.items():
-        t = re.sub(rf"\b{word}\b", digit, t)
+    for word in sorted(spoken, key=len, reverse=True):
+        t = re.sub(rf"\b{re.escape(word)}\b", spoken[word], t)
     t = t.replace(",", ".")
+    t = re.sub(r"\s+", "", t)
+    return t
+
+
+def _parse_count(text):
+    t = _normalize_spoken_numbers(text)
+    nums = re.findall(r"\d+", t)
+    if nums:
+        n = int(nums[0])
+        if n > 0:
+            return n
+    try:
+        n = int(float(t))
+        if n > 0:
+            return n
+    except ValueError:
+        pass
+    return None
+
+
+def _parse_membership(text):
+    t = _normalize_spoken_numbers(text)
+    if not t:
+        return None
     try:
         val = float(t)
         if 0 <= val <= 1:
@@ -195,8 +228,20 @@ def _parse_membership(text):
     return None
 
 
+def _normalize_element_name(text):
+    t = re.sub(r"\s+", "", (text or "").strip())
+    m = re.match(r"^(?:ex|x)(\d+)$", t, re.IGNORECASE)
+    if m:
+        return f"x{m.group(1)}"
+    return t
+
+
 def _norm(text):
     return re.sub(r"\s+", " ", (text or "").strip().lower())
+
+
+def _norm_compact(text):
+    return re.sub(r"\s+", "", _norm(text))
 
 
 def _detect_language(text):
@@ -210,9 +255,12 @@ def _detect_language(text):
 
 def _matches_any(text, word_lists):
     t = _norm(text)
+    tc = _norm_compact(text)
     for words in word_lists:
         for w in words:
-            if w in t:
+            wn = _norm(w)
+            wc = _norm_compact(w)
+            if wn in t or wc in tc:
                 return True
     return False
 
@@ -302,6 +350,24 @@ def _answer_qa(s, topic):
     return _reply(s, reply, data=data, voice_reply=f"{msg(lang, 'qa_ack')} {voice}")
 
 
+def _begin_calculation(s, lang, count=None):
+    s["n"] = 0
+    s["universe"] = []
+    s["A"] = []
+    s["B"] = []
+    s["current_index"] = 0
+    s["op_index"] = 0
+    s["results"] = None
+    if count is not None:
+        s["n"] = count
+        s["stage"] = "ASK_UNIVERSE"
+        return _reply(s, msg(lang, "ask_universe", n=1))
+    s["stage"] = "ASK_COUNT"
+    intro = msg(lang, "start_calc")
+    question = msg(lang, "ask_count")
+    return _reply(s, f"{intro} {question}")
+
+
 def _handle_qa_or_help(s, text):
     if _is_help(text):
         return _reply(s, msg(s["lang"], "help"))
@@ -354,17 +420,12 @@ def process_message(sid, text):
     lang = s.get("lang") or "en"
     if stage in ("MAIN", "DONE"):
         if _is_start_calc(text):
-            s["stage"] = "ASK_COUNT"
-            s["n"] = 0
-            s["universe"] = []
-            s["A"] = []
-            s["B"] = []
-            s["current_index"] = 0
-            s["op_index"] = 0
-            s["results"] = None
-            intro = msg(lang, "start_calc")
-            question = msg(lang, "ask_count")
-            return _reply(s, f"{intro} {question}")
+            count = _parse_count(text)
+            return _begin_calculation(s, lang, count if count is not None else None)
+
+        count = _parse_count(text)
+        if count is not None:
+            return _begin_calculation(s, lang, count)
 
         qa = _handle_qa_or_help(s, text)
         if qa:
@@ -373,11 +434,7 @@ def process_message(sid, text):
         if stage == "DONE":
             return _reply(s, msg(lang, "all_done"))
 
-        # MAIN but unrecognized — nudge user
-        return _reply(
-            s,
-            f"{msg(lang, 'confused')} {msg(lang, 'help')}",
-        )
+        return _reply(s, msg(lang, "confused"))
 
     # Q&A during calculation stages (don't change stage)
     if stage in ("ASK_COUNT", "ASK_UNIVERSE", "ASK_A", "ASK_B", "EXPLAIN"):
@@ -387,13 +444,8 @@ def process_message(sid, text):
 
     # ---- 1. how many elements ----
     if stage == "ASK_COUNT":
-        try:
-            # extract first integer from speech
-            nums = re.findall(r"\d+", text)
-            n = int(nums[0]) if nums else int(text)
-            if n <= 0:
-                raise ValueError
-        except (ValueError, IndexError):
+        n = _parse_count(text)
+        if n is None:
             return _reply(s, msg(lang, "invalid_count"))
         s["n"] = n
         s["stage"] = "ASK_UNIVERSE"
@@ -402,9 +454,10 @@ def process_message(sid, text):
 
     # ---- 2. universe element names ----
     if stage == "ASK_UNIVERSE":
-        if not text:
+        name = _normalize_element_name(text)
+        if not name:
             return _reply(s, msg(lang, "empty_name"))
-        s["universe"].append(text)
+        s["universe"].append(name)
         s["current_index"] += 1
         if s["current_index"] < s["n"]:
             return _reply(s, msg(lang, "ask_universe", n=s["current_index"] + 1))
