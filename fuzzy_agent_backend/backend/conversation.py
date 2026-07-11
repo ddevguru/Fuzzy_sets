@@ -40,6 +40,7 @@ RESTART_WORDS = {
 START_CALC_WORDS = {
     "en": [
         "start calculation", "startcalculation", "start calculating", "startcalculating",
+        "short calculation", "shortcalculation",
         "calculate", "calculating", "calculation", "start calc", "startcalc",
         "begin calculation", "begincalculation", "compute", "lets calculate",
         "let's calculate", "do calculation",
@@ -148,13 +149,26 @@ def reset_session(sid):
 
 
 def recover_and_process(old_sid, text, lang_hint=None):
-    """New session + actually process the user's message (no lost input)."""
+    """New session; only safe commands run automatically after session loss."""
     SESSIONS.pop(old_sid, None)
     new_sid = new_session()
     s = SESSIONS[new_sid]
-    if lang_hint in ("en", "hi", "mr") and not _detect_language(text):
-        s["lang"] = lang_hint
-        s["stage"] = "MAIN"
+    lang = lang_hint if lang_hint in ("en", "hi", "mr") else "en"
+    s["lang"] = lang
+    s["stage"] = "MAIN"
+
+    if _detect_language(text):
+        return new_sid, process_message(new_sid, text)
+    if _is_start_calc(text) or _is_help(text) or _detect_qa_topic(text):
+        return new_sid, process_message(new_sid, text)
+
+    # Mid-calculation numbers/names after session loss — don't restart with wrong n
+    if _parse_count(text) is not None or _parse_membership(text) is not None:
+        return new_sid, _reply(
+            s,
+            f"{msg(lang, 'session_recovered')} {msg(lang, 'restart')}",
+        )
+
     return new_sid, process_message(new_sid, text)
 
 
@@ -201,17 +215,15 @@ def _normalize_spoken_numbers(text):
 
 def _parse_count(text):
     t = _normalize_spoken_numbers(text)
-    nums = re.findall(r"\d+", t)
-    if nums:
-        n = int(nums[0])
-        if n > 0:
-            return n
-    try:
-        n = int(float(t))
-        if n > 0:
-            return n
-    except ValueError:
-        pass
+    if not t:
+        return None
+    if re.fullmatch(r"\d+", t):
+        n = int(t)
+        return n if n > 0 else None
+    m = re.match(r"^(\d+)", t)
+    if m:
+        n = int(m.group(1))
+        return n if n > 0 else None
     return None
 
 
@@ -422,10 +434,6 @@ def process_message(sid, text):
         if _is_start_calc(text):
             count = _parse_count(text)
             return _begin_calculation(s, lang, count if count is not None else None)
-
-        count = _parse_count(text)
-        if count is not None:
-            return _begin_calculation(s, lang, count)
 
         qa = _handle_qa_or_help(s, text)
         if qa:

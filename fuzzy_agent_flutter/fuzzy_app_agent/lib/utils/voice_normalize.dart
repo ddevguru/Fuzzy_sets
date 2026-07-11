@@ -35,7 +35,7 @@ class VoiceNormalize {
     "दशांश": ".",
   };
 
-  static String forBackend(String raw) {
+  static String forBackend(String raw, {String? stage}) {
     var t = raw.trim();
     if (t.isEmpty) return t;
 
@@ -51,13 +51,26 @@ class VoiceNormalize {
 
     lower = lower.replaceAll(",", ".");
 
-    // Compact only numeric input — keep spaces for voice commands like "start calculation"
     final compact = lower.replaceAll(RegExp(r'\s+'), "");
+
+    if (stage == "ASK_COUNT") {
+      final countMatch = RegExp(r'^(\d+)').firstMatch(compact);
+      if (countMatch != null) return countMatch.group(1)!;
+    }
+
+    if (stage == "ASK_A" || stage == "ASK_B") {
+      if (looksLikeMembership(compact)) return compact;
+    }
+
+    if (stage == "ASK_UNIVERSE") {
+      final spaced = lower.replaceAll(RegExp(r'\s+'), " ").trim();
+      return spaced.replaceAll(RegExp(r'^(ex|x)\s*(\d+)$', caseSensitive: false), r'x$2');
+    }
+
     if (looksLikeCount(compact) || looksLikeMembership(compact)) {
       return compact.replaceAll(RegExp(r'^(ex|x)(\d+)$', caseSensitive: false), r'x$2');
     }
 
-    // "x 1" / "ex one" → x1 for element names
     final spaced = lower.replaceAll(RegExp(r'\s+'), " ").trim();
     final element = spaced.replaceAll(RegExp(r'^(ex|x)\s*(\d+)$', caseSensitive: false), r'x$2');
     return element.isNotEmpty ? element : raw.trim();

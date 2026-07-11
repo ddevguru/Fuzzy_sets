@@ -31,7 +31,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   bool _sending = false;
   String _partialVoice = "";
   String? _stage;
-  Timer? _numberDebounce;
+  String? _lastVoicePayload;
+  DateTime? _lastVoiceSentAt;
   late AnimationController _pulseCtrl;
 
   static const _langLabels = {"en": "English", "hi": "हिंदी", "mr": "मराठी"};
@@ -60,7 +61,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   @override
   void dispose() {
-    _numberDebounce?.cancel();
     _pulseCtrl.dispose();
     _textController.dispose();
     _scrollController.dispose();
@@ -184,12 +184,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     if (_autoListen && _sessionId != null && mounted) _startListening();
   }
 
-  Future<void> _send(String text) async {
+  Future<void> _send(String text, {bool fromVoice = false}) async {
     final trimmed = text.trim();
     if (trimmed.isEmpty) return;
-    final payload = VoiceNormalize.forBackend(trimmed);
+    final payload = VoiceNormalize.forBackend(trimmed, stage: _stage);
 
-  if (_sessionId == null) {
+    if (_sessionId == null) {
       try {
         final res = await _api.startSession();
         setState(() => _sessionId = res["session_id"] as String?);
@@ -201,7 +201,23 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       }
     }
 
-    if (_sending) return;
+    if (fromVoice) {
+      final dedupeKey = "$payload|$_stage";
+      final now = DateTime.now();
+      if (_lastVoicePayload == dedupeKey &&
+          _lastVoiceSentAt != null &&
+          now.difference(_lastVoiceSentAt!) < const Duration(seconds: 2)) {
+        return;
+      }
+      _lastVoicePayload = dedupeKey;
+      _lastVoiceSentAt = now;
+    }
+
+    if (_sending) {
+      if (!fromVoice) return;
+      await Future.delayed(const Duration(milliseconds: 350));
+      if (_sending) return;
+    }
 
     if (trimmed.toLowerCase() == "stop" || trimmed == "रुको" || trimmed == "थांब") {
       await _stopAll();
@@ -261,8 +277,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       _partialVoice = "";
     });
 
-    final numberStage = _stage == "ASK_COUNT" || _stage == "ASK_A" || _stage == "ASK_B";
-    if (numberStage) {
+    final calcStage = _stage == "ASK_COUNT" ||
+        _stage == "ASK_UNIVERSE" ||
+        _stage == "ASK_A" ||
+        _stage == "ASK_B" ||
+        _stage == "EXPLAIN";
+    if (calcStage) {
       await _speech.setLanguage("en");
     } else {
       await _speech.setLanguage(_language);
@@ -271,40 +291,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     final started = await _speech.listen(
       (result) {
         if (!mounted) return;
-        _numberDebounce?.cancel();
         setState(() {
           _listening = false;
           _partialVoice = "";
         });
-        if (result.trim().isNotEmpty) _send(result);
+        if (result.trim().isNotEmpty) _send(result, fromVoice: true);
       },
       onPartial: (partial) {
         if (!mounted) return;
         setState(() => _partialVoice = partial);
-        final norm = VoiceNormalize.forBackend(partial);
-        _numberDebounce?.cancel();
-        if (_stage == "ASK_COUNT" && VoiceNormalize.looksLikeCount(norm)) {
-          _numberDebounce = Timer(const Duration(milliseconds: 900), () async {
-            if (!_listening || !mounted) return;
-            await _speech.stop();
-            setState(() {
-              _listening = false;
-              _partialVoice = "";
-            });
-            _send(norm);
-          });
-        } else if ((_stage == "ASK_A" || _stage == "ASK_B") &&
-            VoiceNormalize.looksLikeMembership(norm)) {
-          _numberDebounce = Timer(const Duration(milliseconds: 1100), () async {
-            if (!_listening || !mounted) return;
-            await _speech.stop();
-            setState(() {
-              _listening = false;
-              _partialVoice = "";
-            });
-            _send(norm);
-          });
-        }
       },
     );
 
